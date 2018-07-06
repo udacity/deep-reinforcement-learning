@@ -1,0 +1,414 @@
+\documentclass[10pt]{amsart}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+\geometry{letterpaper}                  
+\geometry{landscape}               
+%\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+\usepackage{tabto}
+\usepackage{empheq, comment}
+\usepackage[ruled]{algorithm2e}
+\usepackage{fancyhdr}
+\renewcommand{\headrulewidth}{0pt}
+\fancyhead[L]{}
+\fancyhead[R]{
+\includegraphics[width=4cm]{udacity-logo.png}
+}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+\pagestyle{fancy}
+
+\title{Reinforcement Learning}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\section{The Problem}
+
+\begin{itemize}
+\item[] $S_t$ \tabto{2cm} state at time $t$
+\item[] $A_t$ \tabto{2cm} action at time $t$
+\item[] $R_t$ \tabto{2cm} reward at time $t$
+\item[] $\gamma$ \tabto{2cm} discount rate (where $0 \leq \gamma \leq 1$)
+\item[] $G_t$ \tabto{2cm} discounted return at time $t$ ($\sum_{k=0}^\infty \gamma^k R_{t+k+1}$)
+\item[] $\mathcal{S}$ \tabto{2cm} set of all nonterminal states
+\item[] $\mathcal{S}^+$ \tabto{2cm} set of all states (including terminal states)
+\item[] $\mathcal{A}$ \tabto{2cm} set of all actions 
+\item[] $\mathcal{A}(s)$ \tabto{2cm} set of all actions available in state $s$
+\item[] $\mathcal{R}$ \tabto{2cm} set of all rewards
+\item[] $p(s',r|s,a)$ \tabto{2cm} probability of next state $s'$ and reward $r$, given current state $s$ and current action $a$ ($\mathbb{P}(S_{t+1}=s', R_{t+1}=r|S_t = s, A_t = a)$)
+\end{itemize}
+
+\section{The Solution}
+\begin{itemize}
+\item[] $\pi$ \tabto{2cm} policy 
+\item[] \tabto{2.5cm} \textit{if deterministic}: $\pi(s) \in \mathcal{A}(s)$ for all $s \in \mathcal{S}$ 
+\item[] \tabto{2.5cm} \textit{if stochastic}: $\pi(a|s) = \mathbb{P}(A_t=a|S_t=s)$ for all $s \in \mathcal{S}$ and $a \in \mathcal{A}(s)$
+\item[] $v_\pi$ \tabto{2cm} state-value function for policy $\pi$ ($v_\pi(s) \doteq \mathbb{E}[G_t|S_t=s]$ for all $s\in\mathcal{S}$)
+\item[] $q_\pi$ \tabto{2cm} action-value function for policy $\pi$ ($q_\pi(s,a) \doteq \mathbb{E}[G_t|S_t=s, A_t=a]$ for all $s \in \mathcal{S}$ and $a \in \mathcal{A}(s)$)
+\item[] $v_*$ \tabto{2cm} optimal state-value function ($v_*(s) \doteq \max_\pi v_\pi(s)$ for all $s \in \mathcal{S}$)
+\item[] $q_*$ \tabto{2cm} optimal action-value function ($q_*(s,a) \doteq \max_\pi q_\pi(s,a)$ for all $s \in \mathcal{S}$ and $a \in \mathcal{A}(s)$)
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+
+\section{Bellman Equations}
+
+\subsection{Bellman Expectation Equations}
+
+\begin{empheq}[box=\fbox]{align}
+v_\pi(s) = \sum_{a \in \mathcal{A}(s)}\pi(a|s)\sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)(r + \gamma v_\pi(s'))\nonumber
+\end{empheq}
+
+\begin{empheq}[box=\fbox]{align}
+q_\pi(s,a) = \sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)(r + \gamma\sum_{a' \in \mathcal{A}(s')} \pi(a'|s') q_\pi(s',a'))\nonumber
+\end{empheq}
+
+\subsection{Bellman Optimality Equations}
+\begin{empheq}[box=\fbox]{align}
+v_*(s) = \max_{a \in \mathcal{A}(s)}\sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)(r + \gamma v_*(s')) \nonumber
+\end{empheq}
+
+\begin{empheq}[box=\fbox]{align}
+q_*(s,a) = \sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)(r + \gamma \max_{a'\in\mathcal{A}(s')}q_*(s',a')) \nonumber
+\end{empheq}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\subsection{Useful Formulas for Deriving the Bellman Equations}
+
+\begin{equation*}
+v_\pi(s) = \sum_{a \in \mathcal{A}(s)}\pi(a|s)q_\pi(s,a) 
+\end{equation*}
+
+\begin{equation*}
+v_*(s) = \max_{a \in \mathcal{A}(s)}q_*(s,a) 
+\end{equation*}
+
+\begin{equation*}
+q_\pi(s,a) = \sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)(r + \gamma v_\pi(s'))
+\end{equation*}
+
+\begin{equation*}
+q_*(s,a) = \sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)(r + \gamma v_*(s'))
+\end{equation*}
+
+\begin{align*}
+q_\pi(s,a) &\doteq \mathbb{E}_{\pi}[ G_t | S_t = s, A_t = a ] & (1)\\
+&= \sum_{s' \in \mathcal{S}, r\in\mathcal{R}}\mathbb{P}(S_{t+1}=s', R_{t+1}=r|S_t=s, A_t=a)\mathbb{E}_{\pi}[ G_{t} | S_t = s, A_t = a, S_{t+1}=s', R_{t+1}=r] & (2)\\
+&= \sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)\mathbb{E}_{\pi}[ G_{t} | S_t = s, A_t = a, S_{t+1}=s', R_{t+1}=r] & (3)\\
+&= \sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)\mathbb{E}_{\pi}[ G_{t} | S_{t+1}=s', R_{t+1}=r] & (4)\\
+&= \sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)\mathbb{E}_{\pi}[ R_{t+1} + \gamma G_{t+1} | S_{t+1}=s', R_{t+1}=r] & (5)\\
+&= \sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)(r  + \gamma \mathbb{E}_\pi[G_{t+1} | S_{t+1}=s'] ) & (6)\\
+&= \sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)(r  + \gamma v_\pi(s') ) & (7)
+\end{align*}
+
+\vspace{.5in}
+
+The reasoning for the above is as follows:
+\vspace{.2in}
+\begin{itemize}
+\item (1) by definition ($q_\pi(s,a) \doteq \mathbb{E}_{\pi}[ G_t | S_t = s, A_t = a ]$) \\
+\item (2) Law of Total Expectation\\
+\item (3) by definition ($p(s',r|s,a)\doteq\mathbb{P}(S_{t+1}=s', R_{t+1}=r|S_t=s, A_t=a)$)\\
+\item (4) $\mathbb{E}_{\pi}[ G_{t} | S_t = s, A_t = a, S_{t+1}=s', R_{t+1}=r] = \mathbb{E}_{\pi}[ G_{t} | S_{t+1}=s', R_{t+1}=r]$\\
+\item (5) $G_t = R_{t+1} + \gamma G_{t+1}$\\
+\item (6) Linearity of Expectation\\
+\item (7) $v_\pi(s') = \mathbb{E}_\pi[G_{t+1} | S_{t+1}=s']$
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+
+\section{Dynamic Programming}
+
+%%%%%%%%%%%% 1 POLICY EVALUATION
+\begin{algorithm}
+	\KwIn{MDP, policy $\pi$, small positive number $\theta$}
+    	\KwOut{$V \approx v_\pi$}
+    	Initialize $V$ arbitrarily (e.g., $V(s)=0$ for all $s \in \mathcal{S}^+$)\\
+    	\Repeat{$\Delta < \theta$}{
+    		$\Delta \leftarrow 0$\\
+		\For{$s \in \mathcal{S}$}{
+			$v \leftarrow V(s)$\\
+			$V(s) \leftarrow \sum_{a\in\mathcal{A}(s)} \pi(a|s) \sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)(r + \gamma V(s'))$\\
+			$\Delta \leftarrow \max(\Delta, |v-V(s)|)$
+		}
+    	}
+	\KwRet{$V$}
+	\caption{Policy Evaluation}
+\end{algorithm}
+
+%%%%%%%%%%%% 2 ESTIMATION OF ACTION VALUES
+\begin{algorithm}
+	\KwIn{MDP, state-value function $V$}
+    	\KwOut{action-value function $Q$}
+		
+    	\For{$s \in \mathcal{S}$}{
+		\For{$a \in \mathcal{A}(s)$}{
+		$Q(s,a) \leftarrow  \sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)(r+\gamma V(s'))$
+		}
+	}
+	\KwRet{$Q$}
+	\caption{Estimation of Action Values}
+\end{algorithm}
+
+
+%%%%%%%%%%%% 3 POLICY IMPROVEMENT
+\begin{algorithm}
+	\KwIn{MDP, value function $V$}
+    	\KwOut{policy $\pi'$}
+		
+    	\For{$s \in \mathcal{S}$}{
+		\For{$a \in \mathcal{A}(s)$}{
+		$Q(s,a) \leftarrow  \sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)(r+\gamma V(s'))$
+		}
+		$\pi'(s) \leftarrow \arg\max_{a\in\mathcal{A}(s)}Q(s,a)$
+		
+	}
+	\KwRet{$\pi'$}
+	\caption{Policy Improvement}
+\end{algorithm}
+
+%%%%%%%%%%%% 4 POLICY ITERATION 
+\begin{algorithm}
+	\KwIn{MDP, small positive number $\theta$}
+    	\KwOut{policy $\pi \approx \pi_*$}
+	Initialize $\pi$ arbitrarily (e.g., $\pi(a|s)=\frac{1}{|\mathcal{A}(s)|}$ for all $s \in \mathcal{S}$ and $a \in \mathcal{A}(s)$)\\
+	$policy\text{-}stable \leftarrow false$\\
+	\Repeat{$policy\text{-}stable = true$}{
+	$V \leftarrow \textbf{Policy\_Evaluation}(\text{MDP}, \pi, \theta)$\\
+	$\pi' \leftarrow \textbf{Policy\_Improvement}(\text{MDP}, V)$\\
+	\If{$\pi= \pi'$}{
+			$policy\text{-}stable \leftarrow true$\\
+	}
+	$\pi \leftarrow \pi'$
+	}
+	\KwRet{$\pi$}
+	\caption{Policy Iteration}
+\end{algorithm}
+
+%%%%%%%%%%%% 5 TRUNCATED POLICY EVALUATION
+\begin{algorithm}
+	\KwIn{MDP, policy $\pi$, value function $V$, positive integer $max\_iterations$}
+    	\KwOut{$V \approx v_\pi$ (if $max\_iterations$ is large enough)}
+	$counter \leftarrow 0$\\
+    	\While{$counter < max\_iterations$}{
+		\For{$s \in \mathcal{S}$}{
+			$V(s) \leftarrow \sum_{a\in\mathcal{A}(s)} \pi(a|s) \sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)(r + \gamma V(s'))$\\
+		}
+		$counter \leftarrow counter + 1$ 
+    	}
+	\KwRet{$V$}
+	\caption{Truncated Policy Evaluation}
+\end{algorithm}
+
+%%%%%%%%%%%% 6 TRUNCATED POLICY ITERATION
+\begin{algorithm}
+	\KwIn{MDP, positive integer $max\_iterations$, small positive number $\theta$}
+    	\KwOut{policy $\pi \approx \pi_*$}
+	Initialize $V$ arbitrarily (e.g., $V(s)=0$ for all $s \in \mathcal{S}^+$)\\
+	Initialize $\pi$ arbitrarily (e.g., $\pi(a|s)=\frac{1}{|\mathcal{A}(s)|}$ for all $s \in \mathcal{S}$ and $a \in \mathcal{A}(s)$)\\
+	\Repeat{$\max_{s\in\mathcal{S}}|V(s) - V_{old}(s)| < \theta$}{
+	$\pi \leftarrow \textbf{Policy\_Improvement}(\text{MDP}, V)$\\
+	$V_{old} \leftarrow V$\\
+	$V \leftarrow \textbf{Truncated\_Policy\_Evaluation}(\text{MDP}, \pi, V, max\_iterations)$
+	}
+	\KwRet{$\pi$}
+	\caption{Truncated Policy Iteration}
+\end{algorithm}
+
+%%%%%%%%%%%% 7 VALUE ITERATION
+\begin{algorithm}
+	\KwIn{MDP, small positive number $\theta$}
+    	\KwOut{policy $\pi \approx \pi_*$}
+    	Initialize $V$ arbitrarily (e.g., $V(s)=0$ for all $s \in \mathcal{S}^+$)\\
+    	\Repeat{$\Delta < \theta$}{
+    		$\Delta \leftarrow 0$\\
+		\For{$s \in \mathcal{S}$}{
+			$v \leftarrow V(s)$\\
+			$V(s) \leftarrow \max_{a\in\mathcal{A}(s)}\sum_{s' \in \mathcal{S}, r\in\mathcal{R}}p(s',r|s,a)(r + \gamma V(s'))$\\
+			$\Delta \leftarrow \max(\Delta, |v-V(s)|)$
+		}
+    	}
+	$\pi \leftarrow \textbf{Policy\_Improvement}(\text{MDP}, V)$ \\
+	\KwRet{$\pi$}
+	\caption{Value Iteration}
+\end{algorithm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+
+\section{Monte Carlo Methods}
+
+%%%%%%%%%%%% 8 FIRST-VISIT MC PREDICTION (STATE VALUES)
+\begin{algorithm}
+	\KwIn{policy $\pi$, positive integer $num\_episodes$}
+    	\KwOut{value function $V$ ($\approx v_\pi$ if $num\_episodes$ is large enough)}
+	Initialize $N(s) = 0$ for all $s\in\mathcal{S}$ \\
+	Initialize $returns\_sum(s) = 0$ for all $s\in\mathcal{S}$ \\
+    	\For{$i \leftarrow 1 \textbf{ to } num\_episodes$}{
+    		Generate an episode $S_0, A_0, R_1, \ldots, S_T$ using $\pi$\\
+		\For{$t \leftarrow 0 \textbf{ to }T-1$}{
+			\uIf{$S_t$ is a first visit (with return $G_t$)}{
+				$N(S_t) \leftarrow N(S_t) + 1$\\
+				$returns\_sum(S_t) \leftarrow returns\_sum(S_t) + G_t$
+			}
+		}
+	}
+	$V(s) \leftarrow returns\_sum(s)/N(s)$ for all $s\in\mathcal{S}$\\
+	\KwRet{$V$}
+	\caption{First-Visit MC Prediction (\textit{for state values})}
+\end{algorithm}
+
+%%%%%%%%%%%% 9 FIRST-VISIT MC PREDICTION (ACTION VALUES)
+\begin{algorithm}
+	\KwIn{policy $\pi$, positive integer $num\_episodes$}
+    	\KwOut{value function $Q$ ($\approx q_\pi$ if $num\_episodes$ is large enough)}
+	Initialize $N(s,a) = 0$ for all $s\in\mathcal{S}, a\in\mathcal{A}(s)$ \\
+	Initialize $returns\_sum(s,a) = 0$ for all $s\in\mathcal{S}, a\in\mathcal{A}(s)$ \\
+    	\For{$i \leftarrow 1 \textbf{ to } num\_episodes$}{
+    		Generate an episode $S_0, A_0, R_1, \ldots, S_T$ using $\pi$\\
+		\For{$t \leftarrow 0 \textbf{ to }T-1$}{
+			\uIf{$(S_t,A_t)$ is a first visit (with return $G_t$)}{
+				$N(S_t, A_t) \leftarrow N(S_t, A_t) + 1$\\
+				$returns\_sum(S_t, A_t) \leftarrow returns\_sum(S_t, A_t) + G_t$
+			}
+		}
+	}
+	$Q(s,a) \leftarrow returns\_sum(s,a)/N(s,a)$ for all $s\in\mathcal{S}$, $a\in\mathcal{A}(s)$\\
+	\KwRet{$Q$}
+	\caption{First-Visit MC Prediction (\textit{for action values})}
+\end{algorithm}
+
+%%%%%%%%%%%% 10 GLIE MC CONTROL
+\begin{algorithm}
+	\KwIn{positive integer $num\_episodes$, GLIE $\{\epsilon_i\}$}
+    	\KwOut{policy $\pi$ ($\approx \pi_*$ if $num\_episodes$ is large enough)}
+	Initialize $Q(s,a) = 0$ for all $s\in\mathcal{S}$ and $a\in\mathcal{A}(s)$ \\
+	Initialize $N(s,a) = 0$ for all $s\in\mathcal{S}, a\in\mathcal{A}(s)$ \\
+	\For{$i \leftarrow 1 \textbf{ to } num\_episodes$}{
+	$\epsilon \leftarrow \epsilon_i$\\
+	$\pi \leftarrow \epsilon\text{-greedy}(Q)$\\
+    	Generate an episode $S_0, A_0, R_1, \ldots, S_T$ using $\pi$\\
+	\For{$t \leftarrow 0 \textbf{ to }T-1$}{
+			\uIf{$(S_t,A_t)$ is a first visit (with return $G_t$)}{
+				$N(S_t,A_t) \leftarrow N(S_t,A_t) + 1$\\
+				$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \frac{1}{N(S_t,A_t)}(G_t - Q(S_t, A_t))$
+			}
+		}
+	}
+	\KwRet{$\pi$}
+	\caption{First-Visit GLIE MC Control}
+\end{algorithm}
+
+
+%%%%%%%%%%%% 11 CONSTANT-ALPHA MC CONTROL
+\begin{algorithm}
+	\KwIn{positive integer $num\_episodes$, small positive fraction $\alpha$, GLIE $\{\epsilon_i\}$}
+    	\KwOut{policy $\pi$ ($\approx \pi_*$ if $num\_episodes$ is large enough)}
+	Initialize $Q$ arbitrarily (e.g., $Q(s,a) = 0$ for all $s\in\mathcal{S}$ and $a\in\mathcal{A}(s)$) \\
+	\For{$i \leftarrow 1 \textbf{ to } num\_episodes$}{
+	$\epsilon \leftarrow \epsilon_i$\\
+	$\pi \leftarrow \epsilon\text{-greedy}(Q)$\\
+    	Generate an episode $S_0, A_0, R_1, \ldots, S_T$ using $\pi$\\
+	\For{$t \leftarrow 0 \textbf{ to }T-1$}{
+			\uIf{$(S_t,A_t)$ is a first visit (with return $G_t$)}{
+				$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha(G_t - Q(S_t, A_t))$
+			}
+		}
+	}
+	\KwRet{$\pi$}
+	\caption{First-Visit Constant-$\alpha$ (GLIE) MC Control}
+\end{algorithm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+
+\section{Temporal-Difference Methods}
+
+%%%%%%%%%%%% 12 TD(0)
+\begin{algorithm}
+	\KwIn{policy $\pi$, positive integer $num\_episodes$}
+    	\KwOut{value function $V$ ($\approx v_\pi$ if $num\_episodes$ is large enough)}
+	Initialize $V$ arbitrarily (e.g., $V(s) = 0$ for all $s\in\mathcal{S}^+$) \\
+    	\For{$i \leftarrow 1 \textbf{ to } num\_episodes$}{
+    		Observe $S_0$\\
+		$t\leftarrow 0$\\
+		\Repeat{$S_t$ is terminal}{
+		Choose action $A_t$ using policy $\pi$\\
+		Take action $A_t$ and observe $R_{t+1}, S_{t+1}$\\
+		$V(S_t) \leftarrow V(S_t) + \alpha (R_{t+1} + \gamma V(S_{t+1}) - V(S_t))$\\
+		$t \leftarrow t+1$
+		}
+	}
+	\KwRet{$V$}
+	\caption{TD(0)}
+\end{algorithm}
+
+%%%%%%%%%%%% 13 Sarsa
+\begin{algorithm}
+	\KwIn{policy $\pi$, positive integer $num\_episodes$, small positive fraction $\alpha$, GLIE $\{\epsilon_i\}$}
+    	\KwOut{value function $Q$ ($\approx q_\pi$ if $num\_episodes$ is large enough)}
+	Initialize $Q$ arbitrarily (e.g., $Q(s,a) = 0$ for all $s\in\mathcal{S}$ and $a\in\mathcal{A}(s)$, and $Q(terminal\text{-}state, \cdot)=0$) \\
+    	\For{$i \leftarrow 1 \textbf{ to } num\_episodes$}{
+		$\epsilon \leftarrow \epsilon_i$\\
+		Observe $S_0$\\
+		Choose action $A_0$ using policy derived from $Q$ (e.g., $\epsilon$-greedy)\\
+		$t\leftarrow 0$\\
+		\Repeat{$S_t$ is terminal}{
+		Take action $A_{t}$ and observe $R_{t+1}, S_{t+1}$\\
+		Choose action $A_{t+1}$ using policy derived from $Q$ (e.g., $\epsilon$-greedy)\\
+		$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha (R_{t+1} + \gamma Q(S_{t+1}, A_{t+1}) - Q(S_t, A_t))$\\
+		$t \leftarrow t+1$
+		}
+	}
+	\KwRet{$Q$}
+	\caption{Sarsa}
+\end{algorithm}
+
+%%%%%%%%%%%% 14 Q-Learning
+\begin{algorithm}
+	\KwIn{policy $\pi$, positive integer $num\_episodes$, small positive fraction $\alpha$, GLIE $\{\epsilon_i\}$}
+    	\KwOut{value function $Q$ ($\approx q_\pi$ if $num\_episodes$ is large enough)}
+	Initialize $Q$ arbitrarily (e.g., $Q(s,a) = 0$ for all $s\in\mathcal{S}$ and $a\in\mathcal{A}(s)$, and $Q(terminal\text{-}state, \cdot)=0$) \\
+    	\For{$i \leftarrow 1 \textbf{ to } num\_episodes$}{
+		$\epsilon \leftarrow \epsilon_i$\\
+		Observe $S_0$\\
+		$t\leftarrow 0$\\
+		\Repeat{$S_t$ is terminal}{
+		Choose action $A_t$ using policy derived from $Q$ (e.g., $\epsilon$-greedy)\\
+		Take action $A_{t}$ and observe $R_{t+1}, S_{t+1}$\\
+		$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha (R_{t+1} + \gamma \max_{a}Q(S_{t+1}, a) - Q(S_t, A_t))$\\
+		$t \leftarrow t+1$
+		}
+	}
+	\KwRet{$Q$}
+	\caption{Sarsamax (Q-Learning)}
+\end{algorithm}
+
+
+%%%%%%%%%%%% 15 Expected Sarsa
+\begin{algorithm}
+	\KwIn{policy $\pi$, positive integer $num\_episodes$, small positive fraction $\alpha$, GLIE $\{\epsilon_i\}$}
+    	\KwOut{value function $Q$ ($\approx q_\pi$ if $num\_episodes$ is large enough)}
+	Initialize $Q$ arbitrarily (e.g., $Q(s,a) = 0$ for all $s\in\mathcal{S}$ and $a\in\mathcal{A}(s)$, and $Q(terminal\text{-}state, \cdot)=0$) \\
+    	\For{$i \leftarrow 1 \textbf{ to } num\_episodes$}{
+		$\epsilon \leftarrow \epsilon_i$\\
+		Observe $S_0$\\
+		$t\leftarrow 0$\\
+		\Repeat{$S_t$ is terminal}{
+		Choose action $A_t$ using policy derived from $Q$ (e.g., $\epsilon$-greedy)\\
+		Take action $A_{t}$ and observe $R_{t+1}, S_{t+1}$\\
+		$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha (R_{t+1} + \gamma \sum_{a}\pi(a|S_{t+1})Q(S_{t+1}, a) - Q(S_t, A_t))$\\
+		$t \leftarrow t+1$
+		}
+	}
+	\KwRet{$Q$}
+	\caption{Expected Sarsa}
+\end{algorithm}
+
+\end{document}  
