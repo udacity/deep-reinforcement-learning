@@ -2,7 +2,7 @@
 
 ### Getting Started
 
-Read the description of the environment in subsection 3.1 of [this paper](https://www.jair.org/media/639/live-639-1834-jair.pdf).  You can verify that the description in the paper matches the OpenAI Gym environment by peeking at the code [here](https://github.com/openai/gym/blob/master/gym/envs/toy_text/taxi.py).
+Read the description of the environment in subsection 3.1 of [this paper](https://arxiv.org/pdf/cs/9905014.pdf).  You can verify that the description in the paper matches the OpenAI Gym environment by peeking at the code [here](https://github.com/openai/gym/blob/master/gym/envs/toy_text/taxi.py).
 
 
 ### Instructions
