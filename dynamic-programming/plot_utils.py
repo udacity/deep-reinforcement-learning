@@ -11,6 +11,6 @@ def plot_values(V):
 	im = ax.imshow(V_sq, cmap='cool')
 	for (j,i),label in np.ndenumerate(V_sq):
 	    ax.text(i, j, np.round(label, 5), ha='center', va='center', fontsize=14)
-	plt.tick_params(bottom='off', left='off', labelbottom='off', labelleft='off')
+	plt.tick_params(bottom=False, left=False, labelbottom=False, labelleft=False)
 	plt.title('State-Value Function')
 	plt.show()
