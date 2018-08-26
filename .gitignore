@@ -102,3 +102,12 @@ ENV/
 
 # mypy
 .mypy_cache/
+.idea/workspace.xml
+.idea/vcs.xml
+.idea/other.xml
+.idea/modules.xml
+.idea/misc.xml
+.idea/markdown-navigator/profiles_settings.xml
+.idea/markdown-navigator.xml
+.idea/inspectionProfiles/Project_Default.xml
+.idea/deep-reinforcement-learning.iml
