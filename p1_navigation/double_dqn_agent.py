@@ -85,10 +85,11 @@ class Agent():
         """
         states, actions, rewards, next_states, dones = experiences
 
-        ## TODO: compute and minimize the loss
+        # Get predicted Q values (for next states) from target model, corresponding
+        # to the action with max value predicted by the local model
+        Q_local_argmax = self.qnetwork_local(next_states).detach().max(1)[1].unsqueeze(1)
+        Q_targets_next = self.qnetwork_target(next_states).gather(1, Q_local_argmax)
 
-        # Get max predicted Q values (for next states) from target model
-        Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
         # Compute Q targets for current states
         Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
 
@@ -163,9 +164,7 @@ class ReplayBuffer:
             np.vstack([e.next_state for e in experiences if e is not None])
         ).float().to(device)
         dones = torch.from_numpy(
-            np.vstack(
-                [e.done for e in experiences if e is not None]
-            ).astype(np.uint8)
+            np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)
         ).float().to(device)
 
         return (states, actions, rewards, next_states, dones)
