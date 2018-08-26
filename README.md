@@ -37,7 +37,7 @@ The labs and projects can be found below.  All of the projects use rich simulati
 
 * [The Taxi Problem](https://github.com/udacity/deep-reinforcement-learning/tree/master/lab-taxi): In this lab, you will train a taxi to pick up and drop off passengers.
 * [Navigation](https://github.com/udacity/deep-reinforcement-learning/tree/master/p1_navigation): In the first project, you will train an agent to collect yellow bananas while avoiding blue bananas.
-* **Continuous Control**: In the second project, you will train an robotic arm to reach target locations. (_Coming soon!_)
+* [Continuous Control](https://github.com/udacity/deep-reinforcement-learning/tree/master/p2_continuous-control): In the second project, you will train an robotic arm to reach target locations.
 * **Collaboration and Competition**: In the third project, you will train a pair of agents to play tennis! (_Coming soon!_)
 
 ### Resources
