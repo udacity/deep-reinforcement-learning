@@ -102,3 +102,6 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# virtualenv
+drlnd/
