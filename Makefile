@@ -64,7 +64,10 @@ sync-to-source: ## sync local data to data source
 	cp -r ./data/* $(DATA_SOURCE)/
 
 create-container: ## create docker container
-	$(DOCKER) run -it -v $(PWD):/work -p $(JUPYTER_HOST_PORT):$(JUPYTER_CONTAINER_PORT) --name $(CONTAINER_NAME) $(IMAGE_NAME)
+	$(DOCKER) run -it \
+	    -v $(PWD):/workdir \
+	    -p $(JUPYTER_HOST_PORT):$(JUPYTER_CONTAINER_PORT) \
+	    --name $(CONTAINER_NAME) $(IMAGE_NAME)
 
 start-container: ## start docker container
 	@echo "$$START_DOCKER_CONTAINER" | $(SHELL)
@@ -72,7 +75,7 @@ start-container: ## start docker container
 	$(DOCKER) attach $(CONTAINER_NAME)
 
 jupyter: ## start Jupyter Notebook server
-	jupyter-notebook --ip=0.0.0.0 --port=${JUPYTER_CONTAINER_PORT}
+	xvfb-run -s "-screen 0 1400x900x24" jupyter-notebook --ip=0.0.0.0 --port=${JUPYTER_CONTAINER_PORT}
 
 test: ## run test cases in tests directory
 	$(PYTHON) -m unittest discover
