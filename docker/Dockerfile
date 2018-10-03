@@ -4,6 +4,7 @@ FROM ubuntu:18.04
 #  Install python3.6 and pip
 ################################################################################
 RUN apt-get update && apt-get install -y \
+  sudo \
   git \
   python3.6 \
   python3-pip \
@@ -49,11 +50,10 @@ RUN pip3 install -r /requirements.txt
 #  Setup jupyter
 ################################################################################
 ## configure jupyter
-#COPY ./docker/run_jupyter.sh /run_jupyter.sh
-#COPY ./docker/jupyter_notebook_config.py /root/.jupyter/
-#RUN chmod +x /run_jupyter.sh
-#&& \
-#    python3 -m ipykernel.kernelspec
+COPY ./docker/run_jupyter.sh /run_jupyter.sh
+COPY ./docker/jupyter_notebook_config.py /root/.jupyter/
+RUN chmod +x /run_jupyter.sh && \
+    python3 -m ipykernel.kernelspec
 
 ################################################################################
 #  add user to docker group
@@ -65,6 +65,5 @@ USER docker
 ################################################################################
 #  setup environment
 ################################################################################
-ENV QT_X11_NO_MITSHM=1
 ENV ROOT_DIR=/workdir
 ENTRYPOINT ["/bin/bash"]
