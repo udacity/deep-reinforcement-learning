@@ -54,6 +54,7 @@ COPY ./docker/run_jupyter.sh /run_jupyter.sh
 COPY ./docker/jupyter_notebook_config.py /root/.jupyter/
 RUN chmod +x /run_jupyter.sh && \
     python3 -m ipykernel.kernelspec
+ENV PASSWORD='zeus'
 
 ################################################################################
 #  add user to docker group

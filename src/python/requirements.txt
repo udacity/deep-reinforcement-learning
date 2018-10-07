@@ -13,3 +13,7 @@ torch==0.4.0
 pandas
 scipy
 ipykernel
+awscli
+flake8
+click
+Sphinx
