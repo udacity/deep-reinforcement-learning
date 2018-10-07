@@ -1,0 +1,7 @@
+awscli
+click
+matplotlib
+jupyter
+notebook
+Sphinx
+flake8
