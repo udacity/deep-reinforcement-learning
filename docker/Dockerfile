@@ -39,15 +39,10 @@ RUN pip3 install -r /requirements.txt
 ################################################################################
 #  Install openAI gym
 ################################################################################
-WORKDIR /build
+WORKDIR /usr/lib
 RUN git clone https://github.com/openai/gym.git && \
     cd gym && \
     pip3 install -e '.[classic_control, box2d]'
-RUN rm /build -r
-#################################################################################
-##  Setup ipython kernel
-#################################################################################
-#RUN python3 -m ipykernel install --user --name drlnd --display-name "drlnd"
 
 #################################################################################
 ##  Setup jupyter
@@ -57,6 +52,11 @@ COPY ./docker/jupyter_notebook_config.py /.jupyter/jupyter_notebook_config.py
 RUN chmod +x /run_jupyter.sh && \
     python3 -m ipykernel.kernelspec
 ENV PASSWORD='zeus'
+
+#################################################################################
+##  Setup ipython kernel
+#################################################################################
+RUN python3 -m ipykernel install --user --name drlnd --display-name "drlnd"
 
 ################################################################################
 #  add user to docker group
