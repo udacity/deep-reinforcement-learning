@@ -39,11 +39,11 @@ RUN pip3 install -r /requirements.txt
 ################################################################################
 #  Install openAI gym
 ################################################################################
-WORKDIR /workdir
+WORKDIR /build
 RUN git clone https://github.com/openai/gym.git && \
     cd gym && \
     pip3 install -e '.[classic_control, box2d]'
-
+RUN rm /build -r
 #################################################################################
 ##  Setup ipython kernel
 #################################################################################
