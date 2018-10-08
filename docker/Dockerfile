@@ -29,11 +29,6 @@ RUN apt-get update && apt-get install -y \
   ffmpeg \
   xvfb
 
-WORKDIR tmp
-RUN git clone https://github.com/openai/gym.git && \
-    cd gym && \
-    pip3 install -e '.[classic_control, box2d]'
-
 ################################################################################
 #  Install python dependencies
 ################################################################################
@@ -42,19 +37,26 @@ COPY ./src/python/requirements.txt /requirements.txt
 RUN pip3 install -r /requirements.txt
 
 ################################################################################
-#  Setup ipython kernel
+#  Install openAI gym
 ################################################################################
-#RUN python3 -m ipykernel install --user --name drlnd --display-name "drlnd"
+WORKDIR /usr/lib
+RUN git clone https://github.com/openai/gym.git && \
+    cd gym && \
+    pip3 install -e '.[classic_control, box2d]'
 
-################################################################################
-#  Setup jupyter
-################################################################################
-## configure jupyter
+#################################################################################
+##  Setup jupyter
+#################################################################################
 COPY ./docker/run_jupyter.sh /run_jupyter.sh
-COPY ./docker/jupyter_notebook_config.py /root/.jupyter/
+COPY ./docker/jupyter_notebook_config.py /.jupyter/jupyter_notebook_config.py
 RUN chmod +x /run_jupyter.sh && \
     python3 -m ipykernel.kernelspec
 ENV PASSWORD='zeus'
+
+#################################################################################
+##  Setup ipython kernel
+#################################################################################
+RUN python3 -m ipykernel install --user --name drlnd --display-name "drlnd"
 
 ################################################################################
 #  add user to docker group
@@ -66,5 +68,6 @@ USER docker
 ################################################################################
 #  setup environment
 ################################################################################
+WORKDIR /workdir
 ENV ROOT_DIR=/workdir
 ENTRYPOINT ["/bin/bash"]
