@@ -19,3 +19,4 @@ click
 notebook
 Sphinx
 flake8
+seaborn
