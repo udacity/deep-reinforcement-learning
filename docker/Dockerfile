@@ -44,19 +44,6 @@ RUN git clone https://github.com/openai/gym.git && \
     cd gym && \
     pip3 install -e '.[classic_control, box2d]'
 
-#################################################################################
-##  Setup jupyter
-#################################################################################
-COPY ./docker/run_jupyter.sh /run_jupyter.sh
-COPY ./docker/jupyter_notebook_config.py /.jupyter/jupyter_notebook_config.py
-RUN chmod +x /run_jupyter.sh && \
-    python3 -m ipykernel.kernelspec
-ENV PASSWORD='zeus'
-
-#################################################################################
-##  Setup ipython kernel
-#################################################################################
-RUN python3 -m ipykernel install --user --name drlnd --display-name "drlnd"
 
 ################################################################################
 #  add user to docker group
@@ -64,6 +51,21 @@ RUN python3 -m ipykernel install --user --name drlnd --display-name "drlnd"
 ARG UID
 RUN useradd docker -l -u $UID -s /bin/bash -m
 USER docker
+
+################################################################################
+#  Setup jupyter
+################################################################################
+WORKDIR /workdir
+COPY ./docker/run_jupyter.sh /run_jupyter.sh
+COPY ./docker/jupyter_notebook_config.py /home/docker/.jupyter/
+#RUN chmod +x /run_jupyter.sh && \
+#    python3 -m ipykernel.kernelspec
+ENV PASSWORD='zeus'
+
+################################################################################
+#  Setup ipython kernel
+################################################################################
+RUN python3 -m ipykernel install --user --name drlnd --display-name "drlnd"
 
 ################################################################################
 #  setup environment
