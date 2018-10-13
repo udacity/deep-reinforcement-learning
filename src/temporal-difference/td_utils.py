@@ -30,7 +30,7 @@ def generate_sarsa_step(env, Q, state_0, action_0, epsilon, alpha, gamma):
     """
     state_1, reward0, terminal_status, info = env.step(a=action_0)
 
-    action_1 = get_epsilon_action(Q, state_0, epsilon, env.nA)
+    action_1 = get_epsilon_action(Q, state_1, epsilon, env.nA)
 
     G1 = Q[state_1][action_1]
 
@@ -55,3 +55,7 @@ def get_epsilon_action(Q, state, epsilon, nb_A):
 def get_sigmoid_epsilon(episode_it, decay_rate=0.0001, x50=10000, floor=0.05, ceil=0.5):
     epsilon = ceil / (1 + np.exp(decay_rate*(episode_it - x50)))
     return np.max([epsilon, floor])
+
+
+def get_inverse_episode_epsilon(episode_it, floor=0.0):
+    return np.max([1.0 / episode_it, floor])
