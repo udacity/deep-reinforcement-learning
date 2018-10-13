@@ -4,7 +4,7 @@ import numpy as np
 
 def run_sarsa_episode(env, Q, epsilon, alpha, gamma):
     state_0 = env.reset()
-    action_0 = get_epsilon_action(Q, state_0, epsilon, env.nA)
+    action_0 = get_greedy_epsilon_action(Q, state_0, epsilon, env.nA)
 
     while True:
         Q, state_1, action_1, terminal_status, info = generate_sarsa_step(
@@ -30,7 +30,7 @@ def generate_sarsa_step(env, Q, state_0, action_0, epsilon, alpha, gamma):
     """
     state_1, reward0, terminal_status, info = env.step(a=action_0)
 
-    action_1 = get_epsilon_action(Q, state_1, epsilon, env.nA)
+    action_1 = get_greedy_epsilon_action(Q, state_1, epsilon, env.nA)
 
     G1 = Q[state_1][action_1]
 
@@ -44,7 +44,7 @@ def generate_sarsa_step(env, Q, state_0, action_0, epsilon, alpha, gamma):
     return Q, state_1, action_1, terminal_status, info
 
 
-def get_epsilon_action(Q, state, epsilon, nb_A):
+def get_greedy_epsilon_action(Q, state, epsilon, nb_A):
     if np.random.rand() < epsilon:
         action = np.random.randint(0, nb_A)
     else:
