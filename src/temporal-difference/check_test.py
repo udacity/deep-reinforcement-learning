@@ -43,6 +43,7 @@ def run_check(check_name, func):
     try:
         getattr(check, check_name)(func)
     except check.failureException as e:
+        print(e)
         printmd('**<span style="color: red;">PLEASE TRY AGAIN</span>**')
         return
     printmd('**<span style="color: green;">PASSED</span>**')
