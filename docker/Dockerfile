@@ -48,18 +48,17 @@ RUN git clone https://github.com/openai/gym.git && \
 ################################################################################
 #  add user to docker group
 ################################################################################
-ARG UID
-RUN useradd docker -l -u $UID -s /bin/bash -m
-USER docker
+#ARG UID
+#RUN useradd docker -l -u $UID -s /bin/bash -m
+#USER docker
 
 ################################################################################
 #  Setup jupyter
 ################################################################################
 WORKDIR /workdir
 COPY ./docker/run_jupyter.sh /run_jupyter.sh
-COPY ./docker/jupyter_notebook_config.py /home/docker/.jupyter/
-#RUN chmod +x /run_jupyter.sh && \
-#    python3 -m ipykernel.kernelspec
+COPY ./docker/jupyter_notebook_config.py /root/.jupyter/
+RUN chmod +x /run_jupyter.sh 
 ENV PASSWORD='zeus'
 
 ################################################################################
