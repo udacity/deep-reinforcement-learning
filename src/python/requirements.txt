@@ -2,7 +2,9 @@ tensorflow==1.7.1
 Pillow>=4.2.1
 matplotlib
 numpy>=1.11.0
+prompt-toolkit==2.0.4
 jupyter
+ipython
 pytest>=3.2.2
 docopt
 pyyaml
@@ -12,3 +14,9 @@ torch==0.4.0
 pandas
 scipy
 ipykernel
+awscli
+click
+notebook
+Sphinx
+flake8
+seaborn
