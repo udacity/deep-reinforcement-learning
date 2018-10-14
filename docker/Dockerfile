@@ -58,7 +58,7 @@ RUN git clone https://github.com/openai/gym.git && \
 WORKDIR /workdir
 COPY ./docker/run_jupyter.sh /run_jupyter.sh
 COPY ./docker/jupyter_notebook_config.py /root/.jupyter/
-RUN chmod +x /run_jupyter.sh 
+RUN chmod +x /run_jupyter.sh
 ENV PASSWORD='zeus'
 
 ################################################################################
