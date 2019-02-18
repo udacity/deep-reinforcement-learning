@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 def hidden_init(layer):
-    fan_in = layer.weight.data.size()[0]
+    fan_in = layer.weight.data.size()[1]
     lim = 1. / np.sqrt(fan_in)
     return (-lim, lim)
 
