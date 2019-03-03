@@ -2,10 +2,11 @@ from unityagents import UnityEnvironment
 import numpy as np
 import os
 from collections import deque
-import matplotlib as plt
+import matplotlib.pyplot as plt
 from dqn_agent import Agent
+import torch
 
-def dqn(n_episodes=100000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.995, train_mode=True):
+def dqn(n_episodes=10000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.995, train_mode=True):
     """Deep Q-Learning.
     
     Params
@@ -59,7 +60,7 @@ def dqn(n_episodes=100000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.
             print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_window)))
         if np.mean(scores_window)>13.0:
             print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(i_episode-100, np.mean(scores_window)))
-            torch.save(agent.qnetwork_local.state_dict(), 'checkpoint.pth')
+            torch.save(agent.qnetwork_local.state_dict(), 'checkpoint_vanilla.pth')
             break
     return scores
 
@@ -67,6 +68,11 @@ def dqn(n_episodes=100000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.
 #in case, unityenvironment
 os.environ['NO_PROXY'] = 'localhost,127.0.0.*'
 # reset the environment
+try:
+	os.chdir(os.path.join(os.getcwd(), 'p1_navigation'))
+	print(os.getcwd())
+except:
+	pass
 
 
 scores = dqn()

@@ -8,11 +8,13 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
+#BUFFER_SIZE = int(1e5)  # replay buffer size
 BUFFER_SIZE = int(1e5)  # replay buffer size
 BATCH_SIZE = 64         # minibatch size
 GAMMA = 0.99            # discount factor
 TAU = 1e-3              # for soft update of target parameters
 LR = 5e-4               # learning rate 
+# LR = 1e-2               # learning rate 
 UPDATE_EVERY = 4        # how often to update the network
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -34,9 +36,10 @@ class Agent():
         self.seed = random.seed(seed)
 
         # Q-Network
-        self.qnetwork_local = QNetwork(state_size, action_size, seed, 128, 128).to(device)
-        self.qnetwork_target = QNetwork(state_size, action_size, seed, 128, 128).to(device)
-        self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
+        self.qnetwork_local = QNetwork(state_size, action_size, seed, 64, 64).to(device)
+        self.qnetwork_target = QNetwork(state_size, action_size, seed, 64, 64).to(device)
+        #self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
+        self.optimizer = optim.RMSprop(self.qnetwork_local.parameters(), lr = LR)
 
         # Replay memory
         self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed)
