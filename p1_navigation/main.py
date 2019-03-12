@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from dqn_agent import Agent
 import torch
 
-def dqn(n_episodes=10000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.995, train_mode=True):
+def dqn(n_episodes=10000, max_t=1000, eps_start=1.0, eps_end=0.05, eps_decay=0.995, train_mode=True):
     """Deep Q-Learning.
     
     Params
