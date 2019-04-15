@@ -7,6 +7,11 @@ from IPython.display import clear_output
 import matplotlib.pyplot as plt
 #get_ipython().run_line_magic('matplotlib', 'inline')
 from collections import deque
+import os
+from tqdm import tqdm
+
+os.environ['NO_PROXY'] = 'localhost,127.0.0.*'
+
 
 def plot(frame_idx, rewards):
     clear_output(True)
@@ -27,13 +32,13 @@ class ActorCriticPolicy(nn.Module):
         
         self.critic = nn.Sequential(
             nn.Linear(num_inputs, hidden_size),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.Linear(hidden_size, 1)
         )
         
         self.actor = nn.Sequential(
             nn.Linear(num_inputs, hidden_size),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.Linear(hidden_size, num_outputs),
         )
         self.log_std = nn.Parameter(torch.ones(1, num_outputs) * std)
@@ -105,7 +110,8 @@ import numpy as np
 
 def main():
     use_cuda = torch.cuda.is_available()
-    device   = torch.device("cuda" if use_cuda else "cpu")
+#    device   = torch.device("cuda" if use_cuda else "cpu")
+    device   = torch.device("cpu")
     print(device)
     scores_window = deque(maxlen=100)
 
@@ -115,14 +121,14 @@ def main():
     #Hyper params:
     hidden_size      = 512
     lr               = 3e-4
-    num_steps        = 1000
-    mini_batch_size  = 16
-    ppo_epochs       = 16
+    num_steps        = 2048
+    mini_batch_size  = 32
+    ppo_epochs       = 10
     threshold_reward = 10
 
 
 
-    max_frames = 1e5
+    max_frames = 250#1e5
     frame_idx  = 0
     test_rewards = []
 
@@ -147,7 +153,7 @@ def main():
     early_stop = False
 
 #    while frame_idx < max_frames and not early_stop:
-    while frame_idx < max_frames and not early_stop:
+    for frame_idx in tqdm(range(max_frames)):
 
         #print('clonk')
         log_probs = []
@@ -188,24 +194,17 @@ def main():
             actions.append(action_t)
             
             state = next_state
-            frame_idx += 1
+
 
             if done:
                 env.reset(train_mode=True)[brain_name]
                 #break
 
             mean_score=np.mean(scores_window)
-            if mean_score > threshold_reward: early_stop = True
+            if mean_score > threshold_reward: break
 
 
-            if frame_idx % 1000 == 0:
-                #test_reward = np.mean([test_env() for _ in range(10)])
-                #test_rewards.append(test_reward)
-                mean_score=np.mean(scores_window)
-                print("Mean Score: ", mean_score, "Frame: ", frame_idx)
-                #plot(frame_idx, scores_window)
-                #if test_reward > threshold_reward: early_stop = True
-                
+
 
         next_state = torch.FloatTensor(next_state).to(device)
         _, next_value = model(next_state)
@@ -221,7 +220,9 @@ def main():
 
         print("ppo_update:", len(states))
         ppo_update(ppo_epochs, mini_batch_size, states, actions, log_probs, returns, advantage, model, optimizer)
-
+        mean_score = np.mean(scores_window)
+        print("Mean Score: ", mean_score, "Frame: ", frame_idx)
+        frame_idx += 1
 
     #%%
     env.close()
