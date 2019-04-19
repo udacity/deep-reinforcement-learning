@@ -109,3 +109,4 @@ Banana/
 monte-carlo/Monte_Carlo-Copy1.ipynb
 *.pth
 p2_continuous-control/Reacher/*
+p2_continuous-control/Reacher20/*

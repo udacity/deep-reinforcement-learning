@@ -53,23 +53,27 @@ class ActorCriticPolicy(nn.Module):
         return dist, value
 
 
+#def ppo_iter(mini_batch_size, states, actions, log_probs, returns, advantage):
+#    batch_size = states.size(0)
+#    for _ in range(batch_size // mini_batch_size):
+#        rand_ids = np.random.randint(0, batch_size, mini_batch_size)
+#        yield states[rand_ids], actions[rand_ids], log_probs[rand_ids], returns[rand_ids], advantage[rand_ids]
+        
+
 def ppo_iter(mini_batch_size, states, actions, log_probs, returns, advantage):
     batch_size = states.size(0)
     for _ in range(batch_size // mini_batch_size):
         rand_ids = np.random.randint(0, batch_size, mini_batch_size)
-        yield states[rand_ids], actions[rand_ids], log_probs[rand_ids], returns[rand_ids], advantage[rand_ids]
-        
-        
+        yield states[rand_ids, :], actions[rand_ids, :], log_probs[rand_ids, :], returns[rand_ids, :], advantage[rand_ids, :]        
 
 def ppo_update(ppo_epochs, mini_batch_size, states, actions, log_probs, returns, advantages, model, optimizer, clip_param=0.2):
     for _ in range(ppo_epochs):
         for state, action, old_log_probs, return_, advantage in ppo_iter(mini_batch_size, states, actions, log_probs, returns, advantages):
-            #print(type(state), state.dtype, state.shape)
             dist, value = model(state)
             entropy = dist.entropy().mean()
             new_log_probs = dist.log_prob(action)
 
-            ratio = (new_log_probs - old_log_probs).exp().unsqueeze(0)
+            ratio = (new_log_probs - old_log_probs).exp()
             surr1 = ratio * advantage
             surr2 = torch.clamp(ratio, 1.0 - clip_param, 1.0 + clip_param) * advantage
 
@@ -77,11 +81,31 @@ def ppo_update(ppo_epochs, mini_batch_size, states, actions, log_probs, returns,
             critic_loss = (return_ - value).pow(2).mean()
 
             loss = 0.5 * critic_loss + actor_loss - 0.001 * entropy
-            #print("Loss: ", loss)
-    
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+#def ppo_update(ppo_epochs, mini_batch_size, states, actions, log_probs, returns, advantages, model, optimizer, clip_param=0.2):
+#    for _ in range(ppo_epochs):
+#        for state, action, old_log_probs, return_, advantage in ppo_iter(mini_batch_size, states, actions, log_probs, returns, advantages):
+#            #print(type(state), state.dtype, state.shape)
+#            dist, value = model(state)
+#            entropy = dist.entropy().mean()
+#            new_log_probs = dist.log_prob(action)
+
+#            ratio = (new_log_probs - old_log_probs).exp().unsqueeze(0)
+#            surr1 = ratio * advantage
+#            surr2 = torch.clamp(ratio, 1.0 - clip_param, 1.0 + clip_param) * advantage
+
+#            actor_loss  = - torch.min(surr1, surr2).mean()
+#            critic_loss = (return_ - value).pow(2).mean()
+
+#            loss = 0.5 * critic_loss + actor_loss - 0.001 * entropy
+    
+#            optimizer.zero_grad()
+#            loss.backward()
+#            optimizer.step()
 
 
 
@@ -95,35 +119,23 @@ def compute_gae(next_value, rewards, masks, values, gamma=0.99, tau=0.95):
         returns.insert(0, (gae + values[step]).squeeze(0))
     return returns
 
+def compute_gaes(next_value, rewards, masks, values, gamma=0.99, tau=0.95):
+    values = values + [next_value]
+    gae = 0
+    returns = []
+    for step in reversed(range(len(rewards))):
+        delta = rewards[step] + gamma * values[step + 1] * masks[step] - values[step]
+        gae = delta + gamma * tau * masks[step] * gae
+        returns.insert(0, gae + values[step])
+    return returns
+
+
+
 def normalize(x, mean=0., std=1., epsilon=1e-8):
     x = (x - np.mean(x)) / (np.std(x) + epsilon)
     x = x * std + mean
 
     return x
-
-def normalized_advantages(next_value, rewards, masks, values, gamma=0.99, tau=0.95):
-    returns = rewards
-    next_return = 0
-    for i in reversed(range(len(rewards))):
-        returns[i] = rewards[i] + nonterminals[i] * gamma * next_return
-        next_return = returns[i]
-
-    # normalize returns and advantages
-    values = normalize(values[:-1], np.mean(returns), np.std(returns))
-    advantages = normalize(returns - values)
-    returns = normalize(returns)
-    return returns
-
-def gae_baseline(next_value, rewards, masks, values, gamma=0.99, tau=0.95):
-    advantages = np.zeros_like(rewards)
-    last_adv = 0
-    for i in reversed(range(len(rewards))):
-        delta = rewards[i] + masks[i] * gamma * values[i+1] - values[i]
-        advantages[i] = last_adv = delta + nonterminals[i] * gamma * lam * last_adv
-    returns = advantages + values[:-1]
-    advantages = normalize(advantages) # normalize advantages
-
-
 
 
 
@@ -178,7 +190,7 @@ def main():
     test_rewards = []
 
 
-    env = UnityEnvironment(file_name='p2_continuous-control/reacher/reacher', base_port=64739)
+    env = UnityEnvironment(file_name='reacher/reacher', base_port=64739)
     # get the default brain
     brain_name = env.brain_names[0]
     brain = env.brains[brain_name]
@@ -205,8 +217,8 @@ def main():
         rewards   = []
         masks     = []
         model.train()
-        env.reset(train_mode=True)[brain_name]
-        state = env_info.vector_observations[0]
+        env_info = env.reset(train_mode=True)[brain_name]
+        state = env_info.vector_observations
         epoch_scores = 0.0
         for duration in range(num_steps):
             
@@ -216,9 +228,9 @@ def main():
             action_t = dist.sample()
             action_np = action_t.cpu().data.numpy()
             env_info = env.step(action_np)[brain_name]           # send all actions to tne environment
-            next_state = env_info.vector_observations[0]        # get next state (for each agent)
-            reward = env_info.rewards[0]                        # get reward (for each agent)
-            done = env_info.local_done[0]                        # see if episode finished
+            next_state = env_info.vector_observations        # get next state (for each agent)
+            reward = env_info.rewards                        # get reward (for each agent)
+            dones = np.array(env_info.local_done)                        # see if episode finished
             if reward == None:
                 pass
 
@@ -226,34 +238,39 @@ def main():
             
             log_probs.append(log_prob)
             values.append(value)
-            rewards.append(reward)
-            epoch_scores += reward
-            masks.append(1 - done)#.unsqueeze(1).to(device))
 
+            reward_t = torch.FloatTensor(reward)
+            rewards.append(reward_t.unsqueeze(1).to(device))
+            masks_t = torch.FloatTensor(1 - dones)
+            masks.append(masks_t.unsqueeze(1).to(device))
             states.append(state)
             actions.append(action_t)
             
             state = next_state
 
-            #mean_score=np.mean(scores_window)
-            #if mean_score > threshold_reward: break
-
-            if done:
-                #print("Epoch: ", frame_idx, " length:", duration)
+            if np.any(dones):
                 break
 
-        print("Lastscore: ", epoch_scores)
         next_state = torch.FloatTensor(state).to(device)
         _, next_value = model(next_state)
-        returns = compute_gae(next_value, rewards, masks, values)
+#        returns = compute_gae(next_value, rewards, masks, values)
+        returns = compute_gaes(next_value, rewards, masks, values)
 
-        returns   = torch.stack(returns).detach().unsqueeze(1)
-        log_probs = torch.stack(log_probs).detach()
-        values    = torch.stack(values).detach()
-        #print(type(states), len(states))#, states.dtype, states.shape)
-        states    = torch.stack(states)
-        actions   = torch.stack(actions)
+
+        returns   = torch.cat(returns).detach()
+        log_probs = torch.cat(log_probs).detach()
+        values    = torch.cat(values).detach()
+        states    = torch.cat(states)
+        actions   = torch.cat(actions)
         advantage = returns - values
+
+        #returns2   = torch.stack(returns).detach().unsqueeze(1)
+        #log_probs2 = torch.stack(log_probs).detach()
+        #values2    = torch.stack(values).detach()
+        #print(type(states), len(states))#, states.dtype, states.shape)
+        #states2    = torch.stack(states)
+        #actions2   = torch.stack(actions)
+        #advantage2 = returns - values
 
         print("ppo_update:", len(states))
         ppo_update(ppo_epochs, mini_batch_size, states, actions, log_probs, returns, advantage, model, optimizer)
