@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from model import ActorCriticPolicy
+from model import ActorCriticPolicy, ActorCritic
 
 
 BATCH_SIZE = 32  # minibatch size
@@ -12,7 +12,7 @@ GAMMA = 0.99  # discount rate
 TAU = 0.95  # tau
 
 GRADIENT_CLIP = 5  # gradient clip
-NUM_EPOCHS = 300  # optimization epochs
+NUM_EPOCHS = 30000  # optimization epochs
 CLIP = 0.2  # PPO clip
 
 BETA = 0.01  # entropy coefficient
@@ -37,7 +37,8 @@ class Agent(object):
         self.state_size = state_size
         self.action_size = action_size
 
-        self.model = ActorCriticPolicy(state_size, action_size, 256)
+#        self.model = ActorCriticPolicy(state_size, action_size, 256)
+        self.model = ActorCritic(state_size, action_size, 256)
         self.optimizer = optim.Adam(self.model.parameters(), LR, eps=EPSILON)
 
     def compute_gaes(self, next_value, rewards, masks, values, gamma=0.99, tau=0.95):
@@ -158,7 +159,10 @@ class Agent(object):
 
     def learn(self, ppo_epochs, mini_batch_size, states, actions, log_probs, returns, advantages, clip_param=0.2):
         for _ in range(ppo_epochs):
-            for state, action, old_log_probs, return_, advantage in self.ppo_iter(mini_batch_size, states, actions, log_probs, returns, advantages):
+#            for state, action, old_log_probs, return_, advantage in self.ppo_iter(mini_batch_size, states, actions, log_probs, returns, advantages):
+            batch_size = states.size(0)
+            for _ in range(batch_size // mini_batch_size):
+                state, action, old_log_probs, return_, advantage = self.sample(states, actions, log_probs, returns, advantages)
                 _, new_log_probs, values, dist = self.act(state)
                 entropy = dist.entropy().mean()
 
