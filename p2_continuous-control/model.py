@@ -42,7 +42,6 @@ class ActorCritic(nn.Module):
     def __init__(self, state_size, action_size, hidden_size, std=0.0):
         super(ActorCritic, self).__init__()
 
-        device = torch.device("cpu")
 
         self.actor = Actor(state_size, action_size, hidden_size)
         self.critic = Critic(state_size, 1, hidden_size)
@@ -91,7 +90,6 @@ class ActorCriticPolicy(nn.Module):
         self.apply(init_weights)
 
     def forward(self, x):
-        x=torch.FloatTensor(x)
         value = self.critic(x)
         mu = self.actor(x)
         std = self.log_std.exp().expand_as(mu)

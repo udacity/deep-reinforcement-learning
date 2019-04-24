@@ -6,14 +6,13 @@ import torch.optim as optim
 
 from model import ActorCriticPolicy
 
-device = torch.device("cpu")
 
 BATCH_SIZE = 32  # minibatch size
 GAMMA = 0.99  # discount rate
 TAU = 0.95  # tau
 
 GRADIENT_CLIP = 5  # gradient clip
-NUM_EPOCHS = 10  # optimization epochs
+NUM_EPOCHS = 300  # optimization epochs
 CLIP = 0.2  # PPO clip
 
 BETA = 0.01  # entropy coefficient
@@ -41,7 +40,7 @@ class Agent(object):
         self.model = ActorCriticPolicy(state_size, action_size, 256)
         self.optimizer = optim.Adam(self.model.parameters(), LR, eps=EPSILON)
 
-    def compute_gaes(next_value, rewards, masks, values, gamma=0.99, tau=0.95):
+    def compute_gaes(self, next_value, rewards, masks, values, gamma=0.99, tau=0.95):
         values = values + [next_value]
         gae = 0
         returns = []
@@ -51,16 +50,37 @@ class Agent(object):
             returns.insert(0, gae + values[step])
         return returns
 
-    def step(self, states, actions, values, rewards, log_probs, masks):
-        next_value = self.model(states[-1]).detach()
-        returns = self.compute_gaes(next_value, rewards, masks, values)
+    def compute_advantage(self, next_value, rewards, masks, values, gamma=0.99, tau=0.95):
+        values = values + [next_value]
+        advantage = 0
+        returns = []
+        for step in reversed(range(len(rewards))):
+            # G(t) = r + G(t+
+            delta = rewards[step] + gamma * values[step + 1] * masks[step] - values[step]
+            gae = delta + gamma * tau * masks[step] * gae
 
+            g_return = reward + GAMMA * next_return * done
+            next_return = g_return
+            # g_return = reward + GAMMA * g_return*done
+
+            # Compute TD error
+            td_error = reward + GAMMA * next_value - value
+            # Compute advantages
+            advantage = advantage * TAU * GAMMA * done + td_error
+
+    def step(self, states, actions, values, rewards, log_probs, masks, next_value):
+
+            #      def compute_gaes(next_value, rewards, masks, values, gamma=0.99, tau=0.95):
+
+        returns = self.compute_gaes(next_value, rewards, masks, values)
         returns   = torch.cat(returns).detach()
         log_probs = torch.cat(log_probs).detach()
         values    = torch.cat(values).detach()
         states    = torch.cat(states)
         actions   = torch.cat(actions)
         advantages = returns - values
+        advantages = (advantages - advantages.mean()) / advantages.std()
+        self.learn(ppo_epochs=10, mini_batch_size=32, states=states, actions=actions, log_probs=log_probs, returns=returns, advantages=advantages, clip_param=0.2)
 
 
 
@@ -119,7 +139,7 @@ class Agent(object):
         log_probs = dist.log_prob(actions)
         log_probs = torch.sum(log_probs, dim=1, keepdim=True)
 
-        return actions, log_probs, values
+        return actions, log_probs, values, dist
 
     def sample(self, states, actions, log_probs, returns, advantages):
         """Randomly sample learning batches from trajectory"""
@@ -127,8 +147,36 @@ class Agent(object):
         return states[rand_idx, :], actions[rand_idx, :], log_probs[rand_idx, :], returns[rand_idx, :], advantages[
                                                                                                         rand_idx, :]
 
+    def ppo_iter(self, mini_batch_size, states, actions, log_probs, returns, advantage):
+        batch_size = states.size(0)
+        for _ in range(batch_size // mini_batch_size):
+            rand_ids = np.random.randint(0, batch_size, mini_batch_size)
+            yield states[rand_ids, :], actions[rand_ids, :], log_probs[rand_ids, :], returns[rand_ids, :], advantage[rand_ids, :]
 
-    def learn(self, states, actions, log_probs_old, returns, advantages, num_agents):
+
+#    def learn(self, states, actions, log_probs_old, returns, advantages, num_agents):
+
+    def learn(self, ppo_epochs, mini_batch_size, states, actions, log_probs, returns, advantages, clip_param=0.2):
+        for _ in range(ppo_epochs):
+            for state, action, old_log_probs, return_, advantage in self.ppo_iter(mini_batch_size, states, actions, log_probs, returns, advantages):
+                _, new_log_probs, values, dist = self.act(state)
+                entropy = dist.entropy().mean()
+
+                ratio = (new_log_probs - old_log_probs).exp()
+                surr1 = ratio * advantage
+                surr2 = torch.clamp(ratio, 1.0 - clip_param, 1.0 + clip_param) * advantage
+
+                actor_loss  = - torch.min(surr1, surr2).mean()
+                critic_loss = (return_ - values).pow(2).mean()
+
+                loss = 0.5 * critic_loss + actor_loss - 0.001 * entropy
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm_(self.model.parameters(), GRADIENT_CLIP)
+                self.optimizer.step()
+
+    def learn_(self, states, actions, log_probs_old, returns, advantages, num_agents):
         """ Optimize surrogate loss with policy and value parameters using given learning batches."""
 
         for _ in range(NUM_EPOCHS):

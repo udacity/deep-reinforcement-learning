@@ -1,14 +1,16 @@
 # %% Change working directory from the workspace root to the ipynb file location. Turn this addition off with the DataScience.changeDirOnImportExport setting
+# %% Change working directory from the workspace root to the ipynb file location. Turn this addition off with the DataScience.changeDirOnImportExport setting
 import os
 import torch
 from unityagents import UnityEnvironment
 
 import numpy as np
 from collections import deque
-from .agent import Agent
+from agent import Agent
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+device = torch.device("cpu")
 
 def test_agent(env, brain_name, agent):
     env_info = env.reset(train_mode=True)[brain_name]
@@ -16,7 +18,9 @@ def test_agent(env, brain_name, agent):
     num_agents = len(env_info.agents)
     scores = np.zeros(num_agents)
     while True:
-        actions, _, _ = agent.act(states)
+        states = torch.FloatTensor(states).to(device)
+        actions, _, _, _ = agent.act(states)
+
         env_info = env.step(actions.cpu().detach().numpy())[brain_name]
         next_states = env_info.vector_observations
         rewards = env_info.rewards
@@ -31,8 +35,8 @@ def test_agent(env, brain_name, agent):
 def main():
     #global env, brain_name, env_info, num_agents, action_size, states, state_size, n_episodes, ROLLOUT_LENGTH, agent
     os.environ['NO_PROXY'] = 'localhost,127.0.0.*'
-    env = UnityEnvironment(file_name='reacher20/Reacher',
-                           base_port=64736)
+    env = UnityEnvironment(file_name='./Reacher20/reacher.exe',
+                           base_port=64736, no_graphics=True)
     brain_name = env.brain_names[0]
     brain = env.brains[brain_name]
     env_info = env.reset(train_mode=True)[brain_name]
@@ -52,7 +56,7 @@ def main():
     # %%
     num_agents = len(env_info.agents)
     max_t = 1e5
-    n_episodes = 10
+    n_episodes = 300
     LR = 3e-4  # learning rate
     EPSILON = 1e-5  # Adam epsilon
     state_size = env_info.vector_observations.shape[1]
@@ -66,6 +70,7 @@ def main():
 # TO CONTINUE TRAINING:
 # agent.model.load_state_dict(torch.load('ppo_checkpoint.pth'))
 def ppo(agent, env, n_episodes):
+    #device = "cuda"
     ROLLOUT_LENGTH = 1024
 
 
@@ -83,20 +88,22 @@ def ppo(agent, env, n_episodes):
             states = env_info.vector_observations
 #o            rollout = []
             episode_rewards = []
-            log_probs = []
-            values = []
-            actions = []
+            log_probs_list = []
+            values_list = []
             states_list = []
-
+            actions_list = []
+            masks = []
 
 
             for _ in range(ROLLOUT_LENGTH):
-
-                actions, log_probs, values = agent.act(states)#
+                states = torch.FloatTensor(states).to(device)
+                actions, log_probs, values, _ = agent.act(states)
                 env_info = env.step(actions.cpu().detach().numpy())[brain_name]
                 next_states = env_info.vector_observations
                 rewards = env_info.rewards
-                dones = np.array([1 if d else 0 for d in env_info.local_done])
+                #dones = np.array([1 if d else 0 for d in env_info.local_done])
+                dones = 1*np.array(env_info.local_done)
+                masks.append(torch.FloatTensor(1-dones).to(device))
 
                 # append tuple ( s, a, p(a|s), r, dones, V(s) )
                 #rollout.append([states, actions.detach(), log_probs.detach(), rewards, 1 - dones, values.detach()])
@@ -104,18 +111,16 @@ def ppo(agent, env, n_episodes):
                 log_probs_list.append(log_probs)
                 values_list.append(values)
                 states_list.append(states)
-                episode_rewards.append(torch.FloatTensor(rewards).unsqueeze(1).to(device))
+                episode_rewards.append(torch.FloatTensor(rewards).to(device))
 
                 states = next_states
                 if np.any(dones):  # exit loop if episode finished
                     break
 
-            log_probs_list = torch.cat(log_probs_list).detach()
-            values_list = torch.cat(values_list).detach()
-            states_list = torch.cat(states_list)
-            actions_list = torch.cat(actions_list)
+            next_state = torch.FloatTensor(states).to(device)
+            _, next_value = agent.model(next_state)
 
-            agent.step(states_list, actions_list, values_list, log_probs_list, dones)
+            agent.step( states=states_list, actions=actions_list, values=values_list, rewards=episode_rewards, log_probs=log_probs_list, masks=masks, next_value=next_value)
 
 
 
@@ -128,7 +133,7 @@ def ppo(agent, env, n_episodes):
                 torch.save(agent.model.state_dict(), f"ppo_checkpoint.pth")
                 print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(i_episode,
                                                                                              np.mean(
-                                                                                                 all_scores_window)))
+                                                                                                 scores_window)))
                 break
 
             print('Episode {}, Total score this episode: {}, Last {} average: {}'.format(i_episode, test_mean_reward,
