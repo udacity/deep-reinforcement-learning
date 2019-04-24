@@ -27,19 +27,24 @@ def init_weights(m):
         nn.init.constant_(m.bias, 0.1)
 
 class ActorCriticPolicy(nn.Module):
-    def __init__(self, num_inputs, num_outputs, hidden_size, std=1.141):
+    def __init__(self, num_inputs, num_outputs, hidden_size, std=0):
         super(ActorCriticPolicy, self).__init__()
         
         self.critic = nn.Sequential(
             nn.Linear(num_inputs, hidden_size),
-            nn.Tanh(),
+            nn.ReLU(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU(),
             nn.Linear(hidden_size, 1)
         )
         
         self.actor = nn.Sequential(
             nn.Linear(num_inputs, hidden_size),
-            nn.Tanh(),
+            nn.ReLU(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU(),
             nn.Linear(hidden_size, num_outputs),
+            nn.Tanh(),
         )
         self.log_std = nn.Parameter(torch.ones(1, num_outputs) * std)
         self.apply(init_weights)
@@ -47,9 +52,9 @@ class ActorCriticPolicy(nn.Module):
     def forward(self, x):
         value = self.critic(x)
         mu    = self.actor(x)
-        log_std = torch.exp(self.log_std).squeeze(0).expand_as(mu)
+        std = self.log_std.exp().expand_as(mu)
         #std   = self.log_std.exp().squeeze(0).expand_as(mu)
-        dist  = Normal(mu, log_std)
+        dist  = torch.distributions.Normal(mu, std)
         return dist, value
 
 
@@ -109,16 +114,6 @@ def ppo_update(ppo_epochs, mini_batch_size, states, actions, log_probs, returns,
 
 
 
-def compute_gae(next_value, rewards, masks, values, gamma=0.99, tau=0.95):
-    values = values + [next_value]
-    gae = 0
-    returns = []
-    for step in reversed(range(len(rewards))):
-        delta = rewards[step] + gamma * values[step + 1] * masks[step] - values[step]
-        gae = delta + gamma * tau * masks[step] * gae
-        returns.insert(0, (gae + values[step]).squeeze(0))
-    return returns
-
 def compute_gaes(next_value, rewards, masks, values, gamma=0.99, tau=0.95):
     values = values + [next_value]
     gae = 0
@@ -143,7 +138,7 @@ def normalize(x, mean=0., std=1., epsilon=1e-8):
 from unityagents import UnityEnvironment
 import numpy as np
 
-def test_agent(env, brain_name, model, device):
+def toast_agent(env, brain_name, model, device):
     env_info = env.reset(train_mode = True)[brain_name]
     state = env_info.vector_observations[0]
     scores = 0.0
@@ -154,16 +149,34 @@ def test_agent(env, brain_name, model, device):
         action_np = action_t.cpu().data.numpy()
 
         env_info = env.step(action_np)[brain_name]
-        next_state = env_info.vector_observations[0]
-        reward = env_info.rewards[0]
-        done = env_info.local_done[0]
+        next_states = env_info.vector_observations
+        rewards = env_info.rewards
+        dones = env_info.local_done
         scores += reward
         state = next_state
         if done:
             break
     return scores
 
-
+def test_agent(env, brain_name,  model, device):
+    env_info = env.reset(train_mode = True)[brain_name]
+    states = env_info.vector_observations
+    num_agents=len(env_info.agents)
+    scores = np.zeros(num_agents)
+    while True:
+        states = torch.FloatTensor(states).to(device)
+        dist, _= model(states)
+        action_t = dist.sample()
+        action_np = action_t.cpu().data.numpy()
+        env_info = env.step(action_np)[brain_name]
+        next_states = env_info.vector_observations
+        rewards = env_info.rewards
+        dones = env_info.local_done
+        scores += rewards
+        states = next_states
+        if np.any(dones):
+            break
+    return np.mean(scores)
 
 def main():
     use_cuda = torch.cuda.is_available()
@@ -176,7 +189,7 @@ def main():
 
 
     #Hyper params:
-    hidden_size      = 512
+    hidden_size      = 256
     lr               = 3e-4
     num_steps        = 2048
     mini_batch_size  = 32
@@ -185,18 +198,19 @@ def main():
 
 
 
-    max_frames = 250#1e5
-    frame_idx  = 0
+    max_episodes = 250#1e5
+    episode  = 0
     test_rewards = []
 
 
-    env = UnityEnvironment(file_name='reacher/reacher', base_port=64739)
+    env = UnityEnvironment(file_name='reacher20/reacher', base_port=64739)
     # get the default brain
     brain_name = env.brain_names[0]
     brain = env.brains[brain_name]
     # reset the environment
     env_info = env.reset(train_mode=True)[brain_name]
     action_size = brain.vector_action_space_size
+    num_agents = len(env_info.agents)
     states = env_info.vector_observations
     state_size = states.shape[1]
 
@@ -208,15 +222,15 @@ def main():
 
     
 
-#    while frame_idx < max_frames and not early_stop:
-    for frame_idx in tqdm(range(max_frames)):
+#    while episode < max_episodes and not early_stop:
+    for episode in tqdm(range(max_episodes)):
         log_probs = []
         values    = []
         states    = []
         actions   = []
         rewards   = []
         masks     = []
-        model.train()
+        #model.train()
         env_info = env.reset(train_mode=True)[brain_name]
         state = env_info.vector_observations
         epoch_scores = 0.0
@@ -224,10 +238,10 @@ def main():
             
             state = torch.FloatTensor(state).to(device)
             dist, value = model(state)
-
             action_t = dist.sample()
             action_np = action_t.cpu().data.numpy()
             env_info = env.step(action_np)[brain_name]           # send all actions to tne environment
+
             next_state = env_info.vector_observations        # get next state (for each agent)
             reward = env_info.rewards                        # get reward (for each agent)
             dones = np.array(env_info.local_done)                        # see if episode finished
@@ -235,14 +249,19 @@ def main():
                 pass
 
             log_prob = dist.log_prob(action_t)
+            log_prob = torch.sum(log_prob, dim=1, keepdim=True)
+
+
             
             log_probs.append(log_prob)
             values.append(value)
 
-            reward_t = torch.FloatTensor(reward)
-            rewards.append(reward_t.unsqueeze(1).to(device))
+            reward_t = torch.FloatTensor(reward).unsqueeze(1).to(device)
+#            rewards.append(reward_t.unsqueeze(1).to(device))
+            rewards.append(reward_t)
             masks_t = torch.FloatTensor(1 - dones)
-            masks.append(masks_t.unsqueeze(1).to(device))
+#            masks.append(masks_t.unsqueeze(1).to(device))
+            masks.append(masks_t)
             states.append(state)
             actions.append(action_t)
             
@@ -262,7 +281,7 @@ def main():
         values    = torch.cat(values).detach()
         states    = torch.cat(states)
         actions   = torch.cat(actions)
-        advantage = returns - values
+        advantages = returns - values
 
         #returns2   = torch.stack(returns).detach().unsqueeze(1)
         #log_probs2 = torch.stack(log_probs).detach()
@@ -271,17 +290,40 @@ def main():
         #states2    = torch.stack(states)
         #actions2   = torch.stack(actions)
         #advantage2 = returns - values
+        clip_param = 0.2
+        for _ in range(ppo_epochs):
+            for state, action, old_log_probs, return_, advantage in ppo_iter(mini_batch_size, states, actions,
+                                                                             log_probs, returns, advantages):
+                dist, value = model(state)
+                entropy = dist.entropy().mean()
 
-        print("ppo_update:", len(states))
-        ppo_update(ppo_epochs, mini_batch_size, states, actions, log_probs, returns, advantage, model, optimizer)
+                new_log_probs = dist.log_prob(action)
+                new_log_probs = torch.sum(new_log_probs, dim=1, keepdim=True)
 
-        model.eval()
+                ratio = (new_log_probs - old_log_probs).exp()
+                #surrogate objective
+                surr1 = ratio * advantage
+                # Clipped Surrogate Objectiv
+                surr2 = ratio.clamp(1.0 - clip_param, 1.0 + clip_param) * advantage
+
+                policy_loss = - torch.min(surr1, surr2).mean()  - 0.01 * entropy
+                value_loss = (return_ - value).pow(2).mean()
+
+                loss = 0.5 * value_loss + policy_loss
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+#        model.eval()
         test_mean_reward = test_agent(env, brain_name, model, device)
         test_rewards.append(test_mean_reward)
         scores_window.append(test_mean_reward)
-        mean_score = np.mean(scores_window)
-        print("Mean Score: ", mean_score, "Frame: ", frame_idx)
-        frame_idx += 1
+        #mean_score = np.mean(scores_window)
+        #print("Mean Score: ", mean_score, "Frame: ", episode)
+        print('Episode {}, Total score this episode: {}, Last {} average: {}'.format(episode, test_mean_reward,
+                                                                                     min(episode, 100),
+                                                                                     np.mean(scores_window)))
+        episode += 1
 
     #%%
     env.close()
