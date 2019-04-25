@@ -13,6 +13,19 @@ from tqdm import tqdm
 os.environ['NO_PROXY'] = 'localhost,127.0.0.*'
 
 
+
+def plotlosses(losses, fig=None):
+
+    if fig is None:
+        fig=plt.figure(figsize=(20,5))
+#        fig.subplot(131)
+        fig.title('Losses')
+        fig.show()
+        return fig
+    fig.set_xdata(losses)
+    fig.draw()
+    return fig
+
 def plot(frame_idx, rewards):
     clear_output(True)
     plt.figure(figsize=(20,5))
@@ -116,14 +129,49 @@ def ppo_update(ppo_epochs, mini_batch_size, states, actions, log_probs, returns,
 
 def compute_gaes(next_value, rewards, masks, values, gamma=0.99, tau=0.95):
     values = values + [next_value]
-    gae = 0
+    advantage = 0
     returns = []
     for step in reversed(range(len(rewards))):
-        delta = rewards[step] + gamma * values[step + 1] * masks[step] - values[step]
-        gae = delta + gamma * tau * masks[step] * gae
-        returns.insert(0, gae + values[step])
+        td_error = rewards[step] + gamma * values[step + 1] * masks[step] - values[step]
+        advantage = advantage*tau*gamma*masks[step] + td_error
+        returns.insert(0, advantage + values[step])
     return returns
 
+def compute_gae_rollout(rollout, gamma=0.99, tau=0.95):
+    storage = [None] * (len(rollout) - 1)
+
+    shape = (num_agents, 1)
+    advantage = torch.Tensor(np.zeros(shape))
+
+    for i in reversed(range(len(rollout) - 1)):
+        # rollout --> tuple ( s, a, p(a|s), r, dones, V(s) ) FOR ALL AGENT
+        # rollout --> last row (s, none, none, none, pending_value) FOR ALL AGENT
+        state, action, log_prob, reward, done, value = rollout[i]
+
+        # last step - next_return = pending_value
+        if i == len(rollout) - 2:
+            next_return = rollout[i + 1][-1]
+
+        state = torch.Tensor(state)
+        action = torch.Tensor(action)
+        reward = torch.Tensor(reward).unsqueeze(1)
+        done = torch.Tensor(done).unsqueeze(1)
+
+        next_value = rollout[i + 1][-1]
+
+        # G(t) = r + G(t+1)
+        g_return = reward + gamma * next_return * done
+        next_return = g_return
+        # g_return = reward + GAMMA * g_return*done
+
+        # Compute TD error
+        td_error = reward + gamma * next_value - value
+        # Compute advantages
+        advantage = advantage * tau * gamma * done + td_error
+
+        # Add (s, a, p(a|s), g, advantage)
+        storage[i] = [state, action, log_prob, g_return, advantage]
+    return storage
 
 
 def normalize(x, mean=0., std=1., epsilon=1e-8):
@@ -193,7 +241,7 @@ def main():
     lr               = 3e-4
     num_steps        = 2048
     mini_batch_size  = 32
-    ppo_epochs       = 10
+    ppo_epochs       = 2
     threshold_reward = 10
 
 
@@ -224,13 +272,13 @@ def main():
 
 #    while episode < max_episodes and not early_stop:
     for episode in tqdm(range(max_episodes)):
+        rollout = []
         log_probs = []
         values    = []
-        states    = []
-        actions   = []
+        states_list    = []
+        actions_list   = []
         rewards   = []
         masks     = []
-        #model.train()
         env_info = env.reset(train_mode=True)[brain_name]
         state = env_info.vector_observations
         epoch_scores = 0.0
@@ -242,29 +290,23 @@ def main():
             action_np = action_t.cpu().data.numpy()
             env_info = env.step(action_np)[brain_name]           # send all actions to tne environment
 
+
             next_state = env_info.vector_observations        # get next state (for each agent)
             reward = env_info.rewards                        # get reward (for each agent)
             dones = np.array(env_info.local_done)                        # see if episode finished
             if reward == None:
                 pass
-
             log_prob = dist.log_prob(action_t)
             log_prob = torch.sum(log_prob, dim=1, keepdim=True)
-
-
-            
             log_probs.append(log_prob)
             values.append(value)
-
             reward_t = torch.FloatTensor(reward).unsqueeze(1).to(device)
-#            rewards.append(reward_t.unsqueeze(1).to(device))
-            rewards.append(reward_t)
             masks_t = torch.FloatTensor(1 - dones)
-#            masks.append(masks_t.unsqueeze(1).to(device))
+            rewards.append(reward_t)
             masks.append(masks_t)
-            states.append(state)
-            actions.append(action_t)
-            
+            states_list.append(state)
+            actions_list.append(action_t)
+
             state = next_state
 
             if np.any(dones):
@@ -272,15 +314,21 @@ def main():
 
         next_state = torch.FloatTensor(state).to(device)
         _, next_value = model(next_state)
+
 #        returns = compute_gae(next_value, rewards, masks, values)
+        mean1 = torch.mean(torch.stack(rewards))
+        print("Rewards: ", mean1)
         returns = compute_gaes(next_value, rewards, masks, values)
+#        return2 = compute_gae_rollout(rollout)
 
 
         returns   = torch.cat(returns).detach()
+        mean2 = torch.mean(returns)
+        print("Returns: ", mean2)
         log_probs = torch.cat(log_probs).detach()
         values    = torch.cat(values).detach()
-        states    = torch.cat(states)
-        actions   = torch.cat(actions)
+        states    = torch.cat(states_list)
+        actions   = torch.cat(actions_list)
         advantages = returns - values
 
         #returns2   = torch.stack(returns).detach().unsqueeze(1)
@@ -290,6 +338,10 @@ def main():
         #states2    = torch.stack(states)
         #actions2   = torch.stack(actions)
         #advantage2 = returns - values
+        losses=[]
+#        hl, = plt.plot([], [])
+#        plt.show()
+
         clip_param = 0.2
         for _ in range(ppo_epochs):
             for state, action, old_log_probs, return_, advantage in ppo_iter(mini_batch_size, states, actions,
@@ -310,9 +362,13 @@ def main():
                 value_loss = (return_ - value).pow(2).mean()
 
                 loss = 0.5 * value_loss + policy_loss
-
+                losses.append(loss)
+                #hl.set_xdata(range(len(losses)))
+                #hl.set_ydata(np.array(losses))
+                #plt.draw()
                 optimizer.zero_grad()
                 loss.backward()
+                nn.utils.clip_grad_norm_(model.parameters(), 5)
                 optimizer.step()
 #        model.eval()
         test_mean_reward = test_agent(env, brain_name, model, device)
