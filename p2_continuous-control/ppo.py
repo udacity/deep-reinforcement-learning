@@ -40,7 +40,7 @@ def init_weights(m):
         nn.init.constant_(m.bias, 0.1)
 
 class ActorCriticPolicy(nn.Module):
-    def __init__(self, num_inputs, num_outputs, hidden_size, std=0):
+    def __init__(self, num_inputs, num_outputs, hidden_size, std=0.0):
         super(ActorCriticPolicy, self).__init__()
         
         self.critic = nn.Sequential(
@@ -60,7 +60,8 @@ class ActorCriticPolicy(nn.Module):
             nn.Tanh(),
         )
         self.log_std = nn.Parameter(torch.ones(1, num_outputs) * std)
-        self.apply(init_weights)
+        
+        #self.apply(init_weights)
         
     def forward(self, x):
         value = self.critic(x)
@@ -241,7 +242,7 @@ def main():
     lr               = 3e-4
     num_steps        = 2048
     mini_batch_size  = 32
-    ppo_epochs       = 2
+    ppo_epochs       = 10
     threshold_reward = 10
 
 
@@ -266,7 +267,7 @@ def main():
     num_outputs = action_size
     
     model = ActorCriticPolicy(num_inputs, num_outputs, hidden_size).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=lr)#,eps= 1e-5)
+    optimizer = optim.Adam(model.parameters(), lr=lr,eps=1e-5)
 
     
 
@@ -330,22 +331,16 @@ def main():
         states    = torch.cat(states_list)
         actions   = torch.cat(actions_list)
         advantages = returns - values
-
-        #returns2   = torch.stack(returns).detach().unsqueeze(1)
-        #log_probs2 = torch.stack(log_probs).detach()
-        #values2    = torch.stack(values).detach()
-        #print(type(states), len(states))#, states.dtype, states.shape)
-        #states2    = torch.stack(states)
-        #actions2   = torch.stack(actions)
-        #advantage2 = returns - values
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+  
         losses=[]
-#        hl, = plt.plot([], [])
-#        plt.show()
 
         clip_param = 0.2
         for _ in range(ppo_epochs):
+            print("return: ", returns.mean(), "advantage:", advantages.mean())
             for state, action, old_log_probs, return_, advantage in ppo_iter(mini_batch_size, states, actions,
                                                                              log_probs, returns, advantages):
+                #print("return: ", return_.mean(), "advantage:", advantage.mean())
                 dist, value = model(state)
                 entropy = dist.entropy().mean()
 

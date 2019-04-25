@@ -87,7 +87,7 @@ class ActorCriticPolicy(nn.Module):
             nn.Tanh(),
         )
         self.log_std = nn.Parameter(torch.ones(1, num_outputs) * std)
-        self.apply(init_weights)
+        #self.apply(init_weights)
 
     def forward(self, x):
         value = self.critic(x)
