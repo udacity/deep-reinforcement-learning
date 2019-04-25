@@ -102,3 +102,11 @@ ENV/
 
 # mypy
 .mypy_cache/
+.vscode/
+*.zip
+Banana/
+.idea/
+monte-carlo/Monte_Carlo-Copy1.ipynb
+*.pth
+p2_continuous-control/Reacher/*
+p2_continuous-control/Reacher20/*
