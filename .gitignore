@@ -110,3 +110,4 @@ monte-carlo/Monte_Carlo-Copy1.ipynb
 *.pth
 p2_continuous-control/Reacher/*
 p2_continuous-control/Reacher20/*
+p2_continuous-control/plot_*.png
