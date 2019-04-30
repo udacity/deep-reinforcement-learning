@@ -141,7 +141,6 @@ def main():
     episode = 0
     nrmlz_adv = True
     test_mean_reward = 1.
-    x = np.linspace(-np.pi, np.pi, 201)
 
 # plot([np.sin(x)], "Pi", "Lolololols sldk lskd lis dpsdlösödp ö spdops dösd psod ö")
 # Random tries
@@ -193,27 +192,29 @@ def main():
 #                                                   nrmlz_adv=True, num_steps=2048, ppo_epochs=5, threshold_reward=10)
 #***    scores_window3, test_rewards3 = run_experiment(hidden_size=256, lr=3e-4, max_episodes=40, mini_batch_size=32,
 #***                                                      nrmlz_adv=True, num_steps=2048, ppo_epochs=3, threshold_reward=10)
+    scores = [
 
-    scores_window1, test_rewards1 = run_experiment(hidden_size=512, lr=3e-4, max_episodes=60, mini_batch_size=1024,
-                                                   nrmlz_adv=False, num_steps=2048, ppo_epochs=5, threshold_reward=10)
-
-    scores_window2, test_rewards2 = run_experiment(hidden_size=256, lr=3e-4, max_episodes=60, mini_batch_size=512,
-                                                      nrmlz_adv=True, num_steps=2048, ppo_epochs=5, threshold_reward=10)
-
-    scores_window3, test_rewards3 = run_experiment(hidden_size=256, lr=3e-4, max_episodes=60, mini_batch_size=32,
-                                                      nrmlz_adv=True, num_steps=2048, ppo_epochs=5, threshold_reward=10)
+#    run_experiment(hidden_size=256, lr=1e-3, max_episodes=30, mini_batch_size=512,
+#                                                   nrmlz_adv=False, num_steps=2048, ppo_epochs=4, threshold_reward=20),
 
 
+    run_experiment(hidden_size=256, lr=1e-3, max_episodes=30, mini_batch_size=128,
+                                                      nrmlz_adv=True, num_steps=2048, ppo_epochs=4, threshold_reward=20, clip_gradients=True),
 
-    plot([scores_window1, scores_window2, scores_window3], "Last Scores compared")
-    plot([test_rewards1, test_rewards2, test_rewards3], "All scores compared")
+    run_experiment(hidden_size=256, lr=1e-3, max_episodes=30, mini_batch_size=32,
+                                                      nrmlz_adv=True, num_steps=2048, ppo_epochs=4, threshold_reward=20, clip_gradients=True),
+
+    run_experiment(hidden_size=256, lr=1e-3, max_episodes=30, mini_batch_size=128,
+                                                      nrmlz_adv=True, num_steps=2048, ppo_epochs=4, threshold_reward=20, clip_gradients=False)
+    ]
+    plot([x[0] for x in scores], "Scores")
 
 
-def run_experiment(hidden_size, lr, max_episodes, mini_batch_size, nrmlz_adv, num_steps, ppo_epochs, threshold_reward):
+def run_experiment(hidden_size, lr, max_episodes, mini_batch_size, nrmlz_adv, num_steps, ppo_epochs, threshold_reward, clip_gradients):
     scores_window, test_rewards = experiment(hidden_size=hidden_size, lr=lr, num_steps=num_steps,
                                              mini_batch_size=mini_batch_size, ppo_epochs=ppo_epochs,
                                              threshold_reward=threshold_reward, max_episodes=max_episodes,
-                                             nrmlz_adv=nrmlz_adv)
+                                             nrmlz_adv=nrmlz_adv, clip_gradients=clip_gradients)
     test_mean_reward = np.mean(test_rewards)
     text = "\n".join([f"HS:{hidden_size} lr:{lr} st:{num_steps} batch:{mini_batch_size} ppo:{ppo_epochs}",
                       f" r:{threshold_reward} e:{max_episodes} adv:{nrmlz_adv} mean {test_mean_reward}"])
@@ -222,7 +223,7 @@ def run_experiment(hidden_size, lr, max_episodes, mini_batch_size, nrmlz_adv, nu
 
 
 def experiment(hidden_size=64, lr=3e-4, num_steps=2048, mini_batch_size=32, ppo_epochs=10, threshold_reward=10,
-               max_episodes=15, nrmlz_adv=True):
+               max_episodes=15, nrmlz_adv=True, clip_gradients=True):
     use_cuda = torch.cuda.is_available()
     #    device   = torch.device("cuda" if use_cuda else "cpu")
     device = torch.device("cpu")
@@ -334,9 +335,10 @@ def experiment(hidden_size=64, lr=3e-4, num_steps=2048, mini_batch_size=32, ppo_
                 losses.append(loss)
                 optimizer.zero_grad()
                 loss.backward()
-                nn.utils.clip_grad_norm_(model.parameters(), 5)
+                if clip_gradients:
+                    nn.utils.clip_grad_norm_(model.parameters(), 5)
                 optimizer.step()
-        #        model.eval()
+
         test_mean_reward = test_agent(env, brain_name, model, device)
         test_rewards.append(test_mean_reward)
         scores_window.append(test_mean_reward)
@@ -345,15 +347,18 @@ def experiment(hidden_size=64, lr=3e-4, num_steps=2048, mini_batch_size=32, ppo_
         print('Episode {}, Total score this episode: {}, Last {} average: {}'.format(episode, test_mean_reward,
                                                                                      min(episode, 100),
                                                                                      np.mean(scores_window)))
-        if np.mean(threshold_reward) > 30.0:
+        if np.mean(scores_window) > threshold_reward:
             torch.save(model.state_dict(),
-                       f"ppo_checkpoint_hs{hidden_size}_lr{lr}_st{num_steps}_b{mini_batch_size}_ppo{ppo_epochs}_r{threshold_reward}_e{max_episodes}_adv{nrmlz_adv}_{test_mean_reward}.pth")
+                       f"ppo_checkpoint_{test_mean_reward}_e{episode}_hs{hidden_size}_lr{lr}_st{num_steps}_b{mini_batch_size}_ppo{ppo_epochs}_r{threshold_reward}_e{episode}_adv{nrmlz_adv}_{test_mean_reward}.pth")
             print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(episode, test_mean_reward))
             break
 
         episode += 1
 
     # %%
+    #torch.save(model.state_dict(),
+    #          f"ppo_checkpoint_{test_mean_reward}_e{episode}_hs{hidden_size}_lr{lr}_st{num_steps}_b{mini_batch_size}_ppo{ppo_epochs}_r{threshold_reward}_e{episode}_adv{nrmlz_adv}.pth")
+
     env.close()
     return scores_window, test_rewards
 
