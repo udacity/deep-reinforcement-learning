@@ -33,6 +33,17 @@ def plot_blackjack_values(V):
     get_figure(False, ax)
     plt.show()
 
+def is_right(policy, x, y, usable_ace):
+    prediction = policy[x, y, usable_ace] if (x, y, usable_ace) in policy else 1
+    if prediction == 0:
+        return is_right.max_hit_optimal[usable_ace][y] < x
+    else:
+        return is_right.max_hit_optimal[usable_ace][y] >= x
+is_right.max_hit_optimal = [
+    [0, 16, 12, 12, 11, 11, 11, 16, 16, 16, 16],
+    [0, 18, 17, 17, 17, 17, 17, 17, 17, 18, 18]
+]
+    
 def plot_policy(policy):
 
     def get_Z(x, y, usable_ace):
@@ -47,6 +58,10 @@ def plot_policy(policy):
         X, Y = np.meshgrid(x_range, y_range)
         Z = np.array([[get_Z(x,y,usable_ace) for x in x_range] for y in y_range])
         surf = ax.imshow(Z, cmap=plt.get_cmap('Pastel2', 2), vmin=0, vmax=1, extent=[10.5, 21.5, 0.5, 10.5])
+        for i in x_range:
+            for j in y_range:
+                if not is_right(policy, i, j, usable_ace):
+                    ax.text(i, j, 'X', ha="center", va="center", color="red") 
         plt.xticks(x_range)
         plt.yticks(y_range)
         plt.gca().invert_yaxis()
