@@ -3,7 +3,7 @@ import sys
 import math
 import numpy as np
 
-def interact(env, agent, num_episodes=20000, window=100):
+def interact(env, agent, num_episodes=1000, window=100):
     """ Monitor agent's performance.
     
     Params
@@ -30,6 +30,7 @@ def interact(env, agent, num_episodes=20000, window=100):
         state = env.reset()
         # initialize the sampled reward
         samp_reward = 0
+        reward = 0
         while True:
             # agent selects an action
             action = agent.select_action(state)
@@ -38,13 +39,16 @@ def interact(env, agent, num_episodes=20000, window=100):
             # agent performs internal updates based on sampled experience
             agent.step(state, action, reward, next_state, done)
             # update the sampled reward
-            samp_reward += reward
             # update the state (s <- s') to next time step
             state = next_state
+            #update the reward 
+            samp_reward += reward
             if done:
                 # save final sampled reward
                 samp_rewards.append(samp_reward)
+                epsilon = agent.update_epsilon()
                 break
+            
         if (i_episode >= 100):
             # get average reward from last 100 episodes
             avg_reward = np.mean(samp_rewards)
@@ -53,12 +57,14 @@ def interact(env, agent, num_episodes=20000, window=100):
             # update best average reward
             if avg_reward > best_avg_reward:
                 best_avg_reward = avg_reward
+            epsilon = agent.update_epsilon()
         # monitor progress
         print("\rEpisode {}/{} || Best average reward {}".format(i_episode, num_episodes, best_avg_reward), end="")
         sys.stdout.flush()
         # check if task is solved (according to OpenAI Gym)
         if best_avg_reward >= 9.7:
             print('\nEnvironment solved in {} episodes.'.format(i_episode), end="")
+            print(epsilon)
             break
         if i_episode == num_episodes: print('\n')
     return avg_rewards, best_avg_reward
