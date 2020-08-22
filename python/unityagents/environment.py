@@ -28,7 +28,7 @@ logger = logging.getLogger("unityagents")
 class UnityEnvironment(object):
     def __init__(self, file_name=None, worker_id=0,
                  base_port=5005, curriculum=None,
-                 seed=0, docker_training=False, no_graphics=False):
+                 seed=0, docker_training=False, no_graphics=False, fullscreen=False):
         """
         Starts a new unity environment and establishes a connection with the environment.
         Notice: Currently communication between Unity and Python takes place over an open socket without authentication.
@@ -52,7 +52,7 @@ class UnityEnvironment(object):
         # If the environment name is 'editor', a new environment will not be launched
         # and the communicator will directly try to connect to an existing unity environment.
         if file_name is not None:
-            self.executable_launcher(file_name, docker_training, no_graphics)
+            self.executable_launcher(file_name, docker_training, no_graphics, fullscreen)
         else:
             logger.info("Start training by pressing the Play button in the Unity Editor.")
         self._loaded = True
@@ -143,7 +143,7 @@ class UnityEnvironment(object):
     def external_brain_names(self):
         return self._external_brain_names
 
-    def executable_launcher(self, file_name, docker_training, no_graphics):
+    def executable_launcher(self, file_name, docker_training, no_graphics, fullscreen):
         cwd = os.getcwd()
         file_name = (file_name.strip()
                      .replace('.app', '').replace('.exe', '').replace('.x86_64', '').replace('.x86', ''))
@@ -188,11 +188,14 @@ class UnityEnvironment(object):
             if not docker_training:
                 if no_graphics:
                     self.proc1 = subprocess.Popen(
-                        [launch_string,'-nographics', '-batchmode',
-                         '--port', str(self.port)])
+                        [launch_string,'-nographics', '-batchmode', '--port', str(self.port)])
                 else:
-                    self.proc1 = subprocess.Popen(
-                        [launch_string, '--port', str(self.port)])
+                    if fullscreen:
+                        self.proc1 = subprocess.Popen(
+                            [launch_string, '--port', str(self.port), '-screen-fullscreen', '1'])
+                    else:
+                        self.proc1 = subprocess.Popen(
+                            [launch_string, '--port', str(self.port), '-screen-fullscreen', '0'])
             else:
                 """
                 Comments for future maintenance:
