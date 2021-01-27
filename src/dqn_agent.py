@@ -87,9 +87,9 @@ class AgentAbstract(object):
 
         # Epsilon-greedy action selection
         if random.random() > eps:
-            return np.argmax(action_values.cpu().data.numpy())
+            return np.argmax(action_values.cpu().data.numpy()).astype(np.int32)
         else:
-            return random.choice(np.arange(self.action_size))
+            return random.choice(np.arange(self.action_size)).astype(np.int32)
 
     @abc.abstractmethod
     def _forward_local(self, states, actions):
