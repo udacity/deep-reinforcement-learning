@@ -216,6 +216,52 @@ class AgentDQ(AgentAbstract):
 
         return ps_target
 
+class AgentDoubleDQ(AgentAbstract):
+    """
+    Implement Dueling Q-Net with Double QNet (fixed) TD-Target computation and Experience Replay
+    Double Q-Net: Split action selection and Q evaluation in two steps
+    """
+
+    def __init__(self, state_size, action_size, gamma,
+                 hidden_layers, drop_p,
+                 batch_size, learning_rate, soft_upd_param, update_every, buffer_size, seed):
+        super(AgentDoubleDQ, self).__init__(
+            state_size, action_size, gamma,
+            hidden_layers, drop_p,
+            batch_size, learning_rate, soft_upd_param, update_every, buffer_size, seed)
+
+        # Q-Network Architecture: Dueling Q-Nets
+        self.qnetwork_local = QNetwork(
+            self.state_size, self.action_size, self.seed, self.hidden_layers, self.drop_p).to(device)
+        self.qnetwork_target = QNetwork(
+            self.state_size, self.action_size, self.seed, self.hidden_layers, self.drop_p).to(device)
+        self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=self.learning_rate)
+        # Experience Replay
+        self.memory = ReplayBuffer(action_size, buffer_size, batch_size, seed)
+
+    def _forward_local(self, states, actions):
+        """
+        Returns
+        ======
+            ps_local (torch.tensor)
+        """
+        ps_local = self.qnetwork_local.forward(states).gather(1, actions)
+
+        return ps_local
+
+    def _forward_targets(self, rewards, next_states, dones):
+        """
+        Use Double Q-Net Algorithm
+        Returns
+        ======
+            ps_target (torch.tensor)
+        """
+        ps_actions = self.qnetwork_local.forward(next_states).detach().max(dim=1)[1].view(-1, 1)
+        ps_target = rewards + self.gamma * (1 - dones) * self.qnetwork_target.forward(next_states).detach().\
+            gather(1, ps_actions)
+
+        return ps_target
+
 
 class AgentDuelDQ(AgentAbstract):
     """

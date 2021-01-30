@@ -12,9 +12,12 @@ class QNetwork(nn.Module):
             state_size (int): Dimension of each state
             action_size (int): Dimension of each action
             seed (int): Random seed
+            hidden_layers (list of int): Number of activation units on each layer
+            drop_p (float): dropout probability to apply to each Dropout layer
         """
         super(QNetwork, self).__init__()
         self.seed = seed
+        self.drop_p = drop_p
         torch.manual_seed(seed)
 
         # hidden layer parameters: (hi, ho)
@@ -31,7 +34,8 @@ class QNetwork(nn.Module):
         # output layer: regression: a q_est for every action accessible from state s
         self.out = nn.Linear(hidden_layers[-1], action_size)
 
-        self.dropout = nn.Dropout(p=drop_p)
+        if self.drop_p is not None:
+            self.dropout = nn.Dropout(p=self.drop_p)
 
     def forward(self, state):
         """Build a network that maps state -> action values."""
@@ -39,7 +43,8 @@ class QNetwork(nn.Module):
         for fc in self.hidden_layers:
             x = fc(x)
             x = F.relu(x)
-            #x = self.dropout(x)
+            if self.drop_p is not None:
+                x = self.dropout(x)
         x = self.out(x)
         
         return x
@@ -83,7 +88,8 @@ class DuelQNetwork(nn.Module):
         self.out_val = nn.Linear(hidden_layers[-1], 1)
         self.out_adv = nn.Linear(hidden_layers[-1], action_size)
 
-        self.dropout = nn.Dropout(p=self.drop_p)
+        if self.drop_p is not None:
+            self.dropout = nn.Dropout(p=self.drop_p)
 
     def forward(self, state):
         """Build a network that maps state -> action values."""
@@ -91,7 +97,8 @@ class DuelQNetwork(nn.Module):
         for fc in self.hidden_layers:
             x = fc(x)
             x = F.relu(x)
-            #x = self.dropout(x)
+            if self.drop_p is not None:
+                x = self.dropout(x)
 
         x_val = F.relu(
             self.out_val(x)
