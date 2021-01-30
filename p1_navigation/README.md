@@ -42,7 +42,7 @@ Follow the instructions in `Navigation.ipynb` to get started with training your 
 
 ### Implementation
 
-A folder named `src` is created where model and agent code is placed. There are two kinds on models (deep NN in PyTorch):
+A folder named `src` is created on the root folder model and agent code is placed. There are two kinds on models (deep NN in PyTorch):
 * QNetwork: Implements Deep Q-Net with Fixed TD-Target computation and Experience Replay
 * DuelQNetwork: Implement Dueling Q-Net with Double QNet (fixed) TD-Target computation and Experience Replay
 
@@ -56,6 +56,7 @@ The `train` loop manages updatable params (like  $\epsilon$), manages environmen
 
 Each hyperparamenter is documented on its corresponding class, check `dqn_agent.py` and `model.py`
 
+* `../src/` stores code for models and agents (on repository root folder)
 * `Nativaion-xxx.ipynb` run each experiment
 * `Report.ipynb` aggregates results add visualizations and discuss them
 
