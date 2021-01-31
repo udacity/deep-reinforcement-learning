@@ -8,6 +8,9 @@ def train(env, agent, n_episodes=2000, max_t=1000,
     """
     Train DQ-Learning agent on a given environment, based on epsilon-greedy policy and GLIE evolution of epsilon parameter
     When the game is considered solved, save the  DQ-Net underlaying the agent in a given path
+    This train loop is developed to work with OpenAI Gym's LunarLander-v2 environment (dqn/rainbow/Deep_Q_Network_DQN.ipynb),
+    other environments may not work
+    Solving is supposed to happen at a moving average window of 100 episodes
     Params
     ======
         env: Environment to solve an episodic game. Should behave like:
