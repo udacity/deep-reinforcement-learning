@@ -38,17 +38,19 @@ The task is episodic, and in order to solve the environment, your agent must get
 ### Instructions
 
 Follow the instructions in `Navigation.ipynb` to get started with training your own agent!  
+Several `Navigation-xx-xx.ipynb` have been added, each one runs a different experiment. 
 
 
 ### Implementation
 
 A folder named `src` is created on the root folder model and agent code is placed. There are two kinds on models (deep NN in PyTorch):
 * QNetwork: Implements Deep Q-Net with Fixed TD-Target computation and Experience Replay
+* DooubleQNetwork: Implements Double DQNs and Experience Replay
 * DuelQNetwork: Implement Dueling Q-Net with Double QNet (fixed) TD-Target computation and Experience Replay
 
-Each model related to its own agent (AgentDQ and AgentDuelDQ)
+Each model related to its own agent (AgentDQ, AgentDoubleDQ, AgentDuelDQ)
 
-In addition as train loop may be specific to environment behaviour, train function is on notebook `Navigation.ipynb` 
+In addition as train loop may be specific to environment behaviour, train function is on notebook `Navigation-xx-xx.ipynb` 
 
 The agent will instanciate the network and manage forward pass and backwardation, as well as interacting with the environment (`step` and `act`, which also implements $\epsilon$-greedy policy), mananging other systems as Experience Replay Buffer.
 
