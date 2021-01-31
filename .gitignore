@@ -102,3 +102,8 @@ ENV/
 
 # mypy
 .mypy_cache/
+*.gitignore
+*.iml
+*.xml
+p1_navigation/Banana_Windows_x86_64/
+.vscode/

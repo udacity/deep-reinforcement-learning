@@ -12,7 +12,7 @@ For this project, you will train an agent to navigate (and collect bananas!) in 
 
 A reward of +1 is provided for collecting a yellow banana, and a reward of -1 is provided for collecting a blue banana.  Thus, the goal of your agent is to collect as many yellow bananas as possible while avoiding blue bananas.  
 
-The state space has 37 dimensions and contains the agent's velocity, along with ray-based perception of objects around agent's forward direction.  Given this information, the agent has to learn how to best select actions.  Four discrete actions are available, corresponding to:
+The `state space has 37 dimensions and contains the agent's velocity, along with ray-based perception of objects around agent's forward direction`.  Given this information, the agent has to learn how to best select actions.  Four discrete actions are available, corresponding to:
 - **`0`** - move forward.
 - **`1`** - move backward.
 - **`2`** - turn left.
@@ -22,6 +22,7 @@ The task is episodic, and in order to solve the environment, your agent must get
 
 ### Getting Started
 
+0. This project is in Python 3 and PyTorch, full environment instructions are on root README
 1. Download the environment from one of the links below.  You need only select the environment that matches your operating system:
     - Linux: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana_Linux.zip)
     - Mac OSX: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana.app.zip)
@@ -38,18 +39,27 @@ The task is episodic, and in order to solve the environment, your agent must get
 
 Follow the instructions in `Navigation.ipynb` to get started with training your own agent!  
 
-### (Optional) Challenge: Learning from Pixels
 
-After you have successfully completed the project, if you're looking for an additional challenge, you have come to the right place!  In the project, your agent learned from information such as its velocity, along with ray-based perception of objects around its forward direction.  A more challenging task would be to learn directly from pixels!
+### Implementation
 
-To solve this harder task, you'll need to download a new Unity environment.  This environment is almost identical to the project environment, where the only difference is that the state is an 84 x 84 RGB image, corresponding to the agent's first-person view.  (**Note**: Udacity students should not submit a project with this new environment.)
+A folder named `src` is created on the root folder model and agent code is placed. There are two kinds on models (deep NN in PyTorch):
+* QNetwork: Implements Deep Q-Net with Fixed TD-Target computation and Experience Replay
+* DuelQNetwork: Implement Dueling Q-Net with Double QNet (fixed) TD-Target computation and Experience Replay
 
-You need only select the environment that matches your operating system:
-- Linux: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/VisualBanana_Linux.zip)
-- Mac OSX: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/VisualBanana.app.zip)
-- Windows (32-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/VisualBanana_Windows_x86.zip)
-- Windows (64-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/VisualBanana_Windows_x86_64.zip)
+Each model related to its own agent (AgentDQ and AgentDuelDQ)
 
-Then, place the file in the `p1_navigation/` folder in the DRLND GitHub repository, and unzip (or decompress) the file.  Next, open `Navigation_Pixels.ipynb` and follow the instructions to learn how to use the Python API to control the agent.
+In addition as train loop may be specific to environment behaviour, train function is on notebook `Navigation.ipynb` 
 
-(_For AWS_) If you'd like to train the agent on AWS, you must follow the instructions to [set up X Server](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Training-on-Amazon-Web-Service.md), and then download the environment for the **Linux** operating system above.
+The agent will instanciate the network and manage forward pass and backwardation, as well as interacting with the environment (`step` and `act`, which also implements $\epsilon$-greedy policy), mananging other systems as Experience Replay Buffer.
+
+The `train` loop manages updatable params (like  $\epsilon$), manages environment's transitions and stores results (scores per episode and model checkpoint)
+
+Each hyperparamenter is documented on its corresponding class, check `dqn_agent.py` and `model.py`
+
+* `../src/` stores code for models and agents (on repository root folder)
+* `Nativaion-xxx.ipynb` run each experiment
+* `Report.ipynb` aggregates results add visualizations and discuss them
+
+### Results
+
+Checkpoints and scores are stored in `models`, where there is an `experiments` folder where each experiment hyperparameters adn results are tracked

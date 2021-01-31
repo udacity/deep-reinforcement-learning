@@ -48,12 +48,13 @@ class Agent():
         self.memory.add(state, action, reward, next_state, done)
         
         # Learn every UPDATE_EVERY time steps.
-        self.t_step = (self.t_step + 1) % UPDATE_EVERY
-        if self.t_step == 0:
-            # If enough samples are available in memory, get random subset and learn
-            if len(self.memory) > BATCH_SIZE:
-                experiences = self.memory.sample()
-                self.learn(experiences, GAMMA)
+        #self.t_step = (self.t_step + 1) % UPDATE_EVERY
+        #if self.t_step == 0:
+        self.t_step += 1
+        # If enough samples are available in memory, get random subset and learn
+        if len(self.memory) > BATCH_SIZE:
+            experiences = self.memory.sample()
+            self.learn(experiences, GAMMA)
 
     def act(self, state, eps=0.):
         """Returns actions for given state as per current policy.
@@ -80,16 +81,31 @@ class Agent():
 
         Params
         ======
-            experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples 
+            experiences (Tuple[torch.Variable]): tuple of (s, a, r, s', done) tuples 
             gamma (float): discount factor
         """
         states, actions, rewards, next_states, dones = experiences
 
         ## TODO: compute and minimize the loss
-        "*** YOUR CODE HERE ***"
-
+        # train loop
+        # states and next_states (batch_size x num_states)
+        # actions and rewards (batch_size x 1)
+        
+        # forward pass
+        # use local network to compute q_est(s,w)[action]
+        ps_local = self.qnetwork_local.forward(states).gather(1, actions)
+        # use target network compute r + g*max(q_est[s',a, w-]), this tensor should be detached from backward computations
+        ps_target = rewards + gamma * (1 - dones) * self.qnetwork_target.forward(next_states).detach().max(dim=1)[0].view(-1, 1)
+        # compute loss
+        loss = F.mse_loss(ps_local, ps_target)
+        # backward pass
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+        
         # ------------------- update target network ------------------- #
-        self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)                     
+        if (self.t_step % UPDATE_EVERY) == 0:
+            self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)    
 
     def soft_update(self, local_model, target_model, tau):
         """Soft update model parameters.
