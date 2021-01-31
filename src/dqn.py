@@ -1,6 +1,6 @@
 from collections import deque
 import numpy as np
-
+import pandas as pd
 
 def train(env, agent, n_episodes=2000, max_t=1000,
         eps_start=1.0, eps_end=0.01, eps_decay=0.995,
@@ -52,7 +52,7 @@ def train(env, agent, n_episodes=2000, max_t=1000,
             agent.save_network(model_save_path)
             break
 
-    return scores
+    return pd.Series(index=range(1, len(scores) +1), data=scores, dtype=np.float32, name='score')
 
 def update_epsilon(eps_end, eps_decay, eps_curr):
     """
