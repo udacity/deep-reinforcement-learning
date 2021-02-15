@@ -314,7 +314,7 @@ class AgentDuelDQ(AgentAbstract):
 class ReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
 
-    def __init__(self, action_size, buffer_size, batch_size, seed):
+    def __init__(self, action_size, buffer_size, batch_size, seed, action_dtype='long'):
         """Initialize a ReplayBuffer object.
 
         Params
@@ -331,6 +331,8 @@ class ReplayBuffer:
         self.seed = seed
         random.seed(seed)
 
+        self.action_dtype = action_dtype
+
     def add(self, state, action, reward, next_state, done):
         """Add a new experience to memory."""
         e = self.experience(state, action, reward, next_state, done)
@@ -341,7 +343,14 @@ class ReplayBuffer:
         experiences = random.sample(self.memory, k=self.batch_size)
 
         states = torch.from_numpy(np.vstack([e.state for e in experiences if e is not None])).float().to(device)
-        actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).long().to(device)
+        actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None]))
+        if self.action_dtype == 'long':
+            actions = actions.long().to(device)
+        elif self.action_dtype == 'float':
+            actions = actions.float().to(device)
+        else:
+            actions = actions.to(device)
+
         rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
         next_states = torch.from_numpy(np.vstack([e.next_state for e in experiences if e is not None])).float().to(
             device)

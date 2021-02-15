@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
+
 
 class QNetwork(nn.Module):
     """Actor (Policy) Model."""
@@ -114,75 +116,164 @@ class DuelQNetwork(nn.Module):
         return x_out
 
 
-class ReinforcePolicyConv(nn.Module):
+class DDPGActor(nn.Module):
+    """
+    Actor (Policy) Model.
+    mu(states; theta_mu), output is a vector of dim action_size, where each element is a float,
+    e.g. controlling an elbow, requires a single metric (flexion torque),
+        controlling a wrist, requires: (rotation torque, flexion torque)
+    states should be normalized prior to input
+    output layer is a tanh to be in [-1,+1]
+    """
 
-    def __init__(self, state_size, action_size, n_channels, seed):
-        super(ReinforcePolicyConv, self).__init__()
-        torch.manual_seed(seed)
+    def __init__(self, state_size, action_size, seed, fc1_units=24, fc2_units=48):
+        """Initialize parameters and build model.
+        Params
+        ======
+            state_size (int): state space dimension
+            action_size (int): action space dimension, e.g. controlling an elbow requires an action of 1 dimension
+                (torque), action vector should be normalized
+            seed (int): Random seed
+            fc1_units (int): Number of nodes in first hidden layer
+            fc2_units (int): Number of nodes in second hidden layer
+        """
+        super(DDPGActor, self).__init__()
         self.seed = seed
-        self.state_size = state_size
-        self.action_size = action_size
-        self.n_channels = n_channels
-
-        self.conv1 = nn.Conv2d(n_channels, 4, kernel_size=6, stride=2, bias=False)
-        self.conv2 = nn.Conv2d(4, 16, kernel_size=6, stride=4)
-
-        s1 = get_out_dims_convs(inputsize=state_size, kernel_size=6, stride=2)
-        s2 = get_out_dims_convs(inputsize=s1, kernel_size=6, stride=4)
-        self.size = 16 * s2 * s2  # channels x w x l
-
-        # two fully connected layer
-        self.fc1 = nn.Linear(self.size, 256)
-        self.fc2 = nn.Linear(256, 1)
-
-        # Sigmoid to
-        self.sig = nn.Sigmoid()
-        self.softm = nn.Softmax()
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = x.view(-1, self.size)
-        x = F.relu(self.fc1(x))
-
-        if self.action_size == 2:
-            return self.sig(self.fc2(x))
-        else:
-            return self.softm(self.fc2(x))
-
-def get_out_dims_convs(inputsize, kernel_size, stride):
-    return round((inputsize - kernel_size + stride) / stride)
-
-
-class ReinforcePolicy(nn.Module):
-
-    def __init__(self, state_size, action_size, n_channels, seed):
-        super(ReinforcePolicyConv, self).__init__()
         torch.manual_seed(seed)
-        self.seed = seed
-        self.state_size = state_size
-        self.action_size = action_size
 
-        # two fully connected layer
-        hidden_units = 256
-        self.fc1 = nn.Linear(self.state_size, hidden_units)
-        if self.action_size == 2:
-            self.fc2 = nn.Linear(hidden_units, 1)
-        else:
-            self.fc2 = nn.Linear(hidden_units, self.action_size)
+        self.fc1 = nn.Linear(state_size, fc1_units)
+        self.fc2 = nn.Linear(fc1_units, fc2_units)
 
-        # Sigmoid to
-        self.sig = nn.Sigmoid()
-        self.softm = nn.Softmax()
+        # output layer: regression, a deterministic policy mu at state s
+        self.out = nn.Linear(fc2_units, action_size)
 
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = x.view(-1, self.size)
+        self.reset_parameters()
+
+    def forward(self, state):
+        """Build an actor (policy) network that maps states -> actions."""
+        x = state
         x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.tanh(self.out(x))
 
-        if self.action_size == 2:
-            return self.sig(self.fc2(x))
-        else:
-            return self.softm(self.fc2(x))
+        return x
 
+    def reset_parameters(self):
+        self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
+        self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
+        self.out.weight.data.uniform_(-3e-3, 3e-3)
+
+
+class DDPGCritic(nn.Module):
+    """
+    Critic (Value) Model.
+    Q(states, mu(states; theta_mu); theta_Q)
+    state is inputted in the first layer, the second layer takes this output and actions
+    see DDPGActor to check mu(states; theta_mu)
+    states should be normalized prior to input
+    """
+
+    def __init__(self, state_size, action_size, seed, fcs1_units=24, fc2_units=48):
+        """Initialize parameters and build model.
+        Params
+        ======
+            state_size (int): state space dimension
+            action_size (int): action space dimension, e.g. controlling an elbow requires an action of 1 dimension
+                (torque), action vector should be normalized
+            seed (int): Random seed
+            fcs1_units (int): Number of nodes in the first hidden layer
+            fc2_units (int): Number of nodes in the second hidden layer
+        """
+        super(DDPGCritic, self).__init__()
+        self.seed = seed
+        torch.manual_seed(seed)
+
+        self.fcs1 = nn.Linear(state_size, fcs1_units)
+        self.fc2 = nn.Linear(fcs1_units + action_size, fc2_units)
+
+        # output layer: regression: a q_est(s)
+        self.out = nn.Linear(fc2_units, 1)
+
+        self.reset_parameters()
+
+    def forward(self, state, action):
+        """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
+        xs = state
+        xs = F.relu(self.fcs1(xs))
+        x = torch.cat((xs, action), dim=1)
+        x = F.relu(self.fc2(x))
+        x = self.out(x)
+
+        return x
+
+    def reset_parameters(self):
+        self.fcs1.weight.data.uniform_(*hidden_init(self.fcs1))
+        self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
+        self.out.weight.data.uniform_(-3e-3, 3e-3)
+
+
+class DDPG(nn.Module):
+    """
+    Critic (Value) Model.
+    Q(states, mu(states; theta_mu); theta_Q)
+    state is inputted in the first layer, the second layer takes this output and actions
+    see DDPGActor to check mu(states; theta_mu)
+    states should be normalized prior to input
+    """
+
+    def __init__(self, state_size, action_size, seed, fc_phi_units=24, fc1_actor_units=48, fc1_critic_units=48):
+        """Initialize parameters and build model.
+        Params
+        ======
+            state_size (int): state space dimension
+            action_size (int): action space dimension, e.g. controlling an elbow requires an action of 1 dimension
+                (torque), action vector should be normalized
+            seed (int): Random seed
+            fcs1_units (int): Number of nodes in the first hidden layer
+            fc2_units (int): Number of nodes in the second hidden layer
+        """
+        super(DDPG, self).__init__()
+        self.seed = seed
+        torch.manual_seed(seed)
+
+        self.phi_body = nn.Linear(state_size, fc_phi_units)
+        self.actor_body = nn.Linear(fc_phi_units, fc1_actor_units)
+        self.critic_body = nn.Linear(fc_phi_units + action_size, fc1_critic_units)
+
+        self.out_action = nn.Linear(fc1_actor_units, action_size)
+        self.out_critic = nn.Linear(fc1_critic_units, 1)
+
+        self.reset_parameters()
+
+    def forward(self, state):
+        phi = F.relu(self.feature(state))
+        action = F.relu(self.actor(phi))
+
+        return action
+
+    def feature(self, state):
+
+        return F.relu(self.phi_body(state))
+
+    def actor(self, phi):
+
+        x = F.relu(self.actor_body(phi))
+        return torch.tanh(self.out_action(x))
+
+    def critic(self, phi, action):
+        x = torch.cat([phi, action], dim=1)
+        x = F.relu(self.critic_body(x))
+        return self.out_critic(x)
+
+    def reset_parameters(self):
+        self.phi_body.weight.data.uniform_(*hidden_init(self.phi_body))
+        self.actor_body.weight.data.uniform_(*hidden_init(self.actor_body))
+        self.critic_body.weight.data.uniform_(*hidden_init(self.critic_body))
+        self.out_action.weight.data.uniform_(-3e-3, 3e-3)
+        self.out_critic.weight.data.uniform_(-3e-3, 3e-3)
+
+
+def hidden_init(layer):
+    fan_in = layer.weight.data.size()[0]
+    lim = 1. / np.sqrt(fan_in)
+    return (-lim, lim)
