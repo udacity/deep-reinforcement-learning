@@ -142,6 +142,7 @@ class DDPGActor(nn.Module):
         torch.manual_seed(seed)
 
         self.fc1 = nn.Linear(state_size, fc1_units)
+        self.bn1 = nn.BatchNorm1d(fc1_units)
         self.fc2 = nn.Linear(fc1_units, fc2_units)
 
         # output layer: regression, a deterministic policy mu at state s
@@ -152,7 +153,11 @@ class DDPGActor(nn.Module):
     def forward(self, state):
         """Build an actor (policy) network that maps states -> actions."""
         x = state
-        x = F.relu(self.fc1(x))
+
+        if len(x.size()) > 1:
+            x = F.relu(self.bn1(self.fc1(x)))
+        else:
+            x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.tanh(self.out(x))
 
@@ -189,6 +194,7 @@ class DDPGCritic(nn.Module):
         torch.manual_seed(seed)
 
         self.fcs1 = nn.Linear(state_size, fcs1_units)
+        self.bn1 = nn.BatchNorm1d(fcs1_units)
         self.fc2 = nn.Linear(fcs1_units + action_size, fc2_units)
 
         # output layer: regression: a q_est(s)
@@ -199,7 +205,7 @@ class DDPGCritic(nn.Module):
     def forward(self, state, action):
         """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
         xs = state
-        xs = F.relu(self.fcs1(xs))
+        xs = F.relu(self.bn1(self.fcs1(xs)))
         x = torch.cat((xs, action), dim=1)
         x = F.relu(self.fc2(x))
         x = self.out(x)
@@ -264,6 +270,15 @@ class DDPG(nn.Module):
         x = torch.cat([phi, action], dim=1)
         x = F.relu(self.critic_body(x))
         return self.out_critic(x)
+
+    def get_actor_params(self):
+        return list(self.actor_body.parameters()) + list(self.fc_action.parameters())
+
+    def get_critic_params(self):
+        return list(self.critic_body.parameters()) + list(self.fc_critic.parameters())
+
+    def get_phi_params(self):
+        return list(self.phi_body.parameters())
 
     def reset_parameters(self):
         self.phi_body.weight.data.uniform_(*hidden_init(self.phi_body))
