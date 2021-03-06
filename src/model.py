@@ -126,7 +126,7 @@ class DDPGActor(nn.Module):
     output layer is a tanh to be in [-1,+1]
     """
 
-    def __init__(self, state_size, action_size, seed, fc1_units=24, fc2_units=48):
+    def __init__(self, state_size, action_size, seed, fc1_units=24, fc2_units=48, add_bn1=False):
         """Initialize parameters and build model.
         Params
         ======
@@ -136,13 +136,16 @@ class DDPGActor(nn.Module):
             seed (int): Random seed
             fc1_units (int): Number of nodes in first hidden layer
             fc2_units (int): Number of nodes in second hidden layer
+            add_bn1 (bool): Add BatchNorm to the first layer
         """
         super(DDPGActor, self).__init__()
         self.seed = seed
+        self.add_bn1 = add_bn1
         torch.manual_seed(seed)
 
         self.fc1 = nn.Linear(state_size, fc1_units)
-        self.bn1 = nn.BatchNorm1d(fc1_units)
+        if self.add_bn1:
+            self.bn1 = nn.BatchNorm1d(fc1_units)
         self.fc2 = nn.Linear(fc1_units, fc2_units)
 
         # output layer: regression, a deterministic policy mu at state s
@@ -153,8 +156,7 @@ class DDPGActor(nn.Module):
     def forward(self, state):
         """Build an actor (policy) network that maps states -> actions."""
         x = state
-
-        if len(x.size()) > 1:
+        if self.add_bn1 and len(x.size()) > 1:
             x = F.relu(self.bn1(self.fc1(x)))
         else:
             x = F.relu(self.fc1(x))
@@ -178,7 +180,7 @@ class DDPGCritic(nn.Module):
     states should be normalized prior to input
     """
 
-    def __init__(self, state_size, action_size, seed, fcs1_units=24, fc2_units=48):
+    def __init__(self, state_size, action_size, seed, fcs1_units=24, fc2_units=48, add_bn1 = False):
         """Initialize parameters and build model.
         Params
         ======
@@ -188,15 +190,17 @@ class DDPGCritic(nn.Module):
             seed (int): Random seed
             fcs1_units (int): Number of nodes in the first hidden layer
             fc2_units (int): Number of nodes in the second hidden layer
+            add_bn1 (bool): Add BatchNorm to the first layer
         """
         super(DDPGCritic, self).__init__()
         self.seed = seed
         torch.manual_seed(seed)
+        self.add_bn1 = add_bn1
 
         self.fcs1 = nn.Linear(state_size, fcs1_units)
-        self.bn1 = nn.BatchNorm1d(fcs1_units)
         self.fc2 = nn.Linear(fcs1_units + action_size, fc2_units)
-
+        if self.add_bn1:
+            self.bn1 = nn.BatchNorm1d(fcs1_units)
         # output layer: regression: a q_est(s)
         self.out = nn.Linear(fc2_units, 1)
 
@@ -205,7 +209,10 @@ class DDPGCritic(nn.Module):
     def forward(self, state, action):
         """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
         xs = state
-        xs = F.relu(self.bn1(self.fcs1(xs)))
+        if self.add_bn1:
+            xs = F.relu(self.bn1(self.fcs1(xs)))
+        else:
+            xs = F.relu(self.fcs1(xs))
         x = torch.cat((xs, action), dim=1)
         x = F.relu(self.fc2(x))
         x = self.out(x)
@@ -216,76 +223,6 @@ class DDPGCritic(nn.Module):
         self.fcs1.weight.data.uniform_(*hidden_init(self.fcs1))
         self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
         self.out.weight.data.uniform_(-3e-3, 3e-3)
-
-
-class DDPG(nn.Module):
-    """
-    Critic (Value) Model.
-    Q(states, mu(states; theta_mu); theta_Q)
-    state is inputted in the first layer, the second layer takes this output and actions
-    see DDPGActor to check mu(states; theta_mu)
-    states should be normalized prior to input
-    """
-
-    def __init__(self, state_size, action_size, seed, fc_phi_units=24, fc1_actor_units=48, fc1_critic_units=48):
-        """Initialize parameters and build model.
-        Params
-        ======
-            state_size (int): state space dimension
-            action_size (int): action space dimension, e.g. controlling an elbow requires an action of 1 dimension
-                (torque), action vector should be normalized
-            seed (int): Random seed
-            fcs1_units (int): Number of nodes in the first hidden layer
-            fc2_units (int): Number of nodes in the second hidden layer
-        """
-        super(DDPG, self).__init__()
-        self.seed = seed
-        torch.manual_seed(seed)
-
-        self.phi_body = nn.Linear(state_size, fc_phi_units)
-        self.actor_body = nn.Linear(fc_phi_units, fc1_actor_units)
-        self.critic_body = nn.Linear(fc_phi_units + action_size, fc1_critic_units)
-
-        self.out_action = nn.Linear(fc1_actor_units, action_size)
-        self.out_critic = nn.Linear(fc1_critic_units, 1)
-
-        self.reset_parameters()
-
-    def forward(self, state):
-        phi = F.relu(self.feature(state))
-        action = F.relu(self.actor(phi))
-
-        return action
-
-    def feature(self, state):
-
-        return F.relu(self.phi_body(state))
-
-    def actor(self, phi):
-
-        x = F.relu(self.actor_body(phi))
-        return torch.tanh(self.out_action(x))
-
-    def critic(self, phi, action):
-        x = torch.cat([phi, action], dim=1)
-        x = F.relu(self.critic_body(x))
-        return self.out_critic(x)
-
-    def get_actor_params(self):
-        return list(self.actor_body.parameters()) + list(self.fc_action.parameters())
-
-    def get_critic_params(self):
-        return list(self.critic_body.parameters()) + list(self.fc_critic.parameters())
-
-    def get_phi_params(self):
-        return list(self.phi_body.parameters())
-
-    def reset_parameters(self):
-        self.phi_body.weight.data.uniform_(*hidden_init(self.phi_body))
-        self.actor_body.weight.data.uniform_(*hidden_init(self.actor_body))
-        self.critic_body.weight.data.uniform_(*hidden_init(self.critic_body))
-        self.out_action.weight.data.uniform_(-3e-3, 3e-3)
-        self.out_critic.weight.data.uniform_(-3e-3, 3e-3)
 
 
 def hidden_init(layer):
