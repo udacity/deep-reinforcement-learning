@@ -107,3 +107,7 @@ ENV/
 *.xml
 p1_navigation/Banana_Windows_x86_64/
 .vscode/
+p2_continuous-control/Reacher_Windows_x86_64/
+p2_continuous-control/Reacher_Windows_x86_64_20agents/
+p2_continuous-control/Reacher_Windows_x86_64.zip
+p2_continuous-control/Reacher_Windows_x86_64_20agents.zip
