@@ -6,6 +6,11 @@
 
 # Project 2: Continuous Control
 
+### DRLD Dependencies
+
+In order to run this environment, please follow the instructions on the README.md on root repository or in the next link: https://github.com/udacity/deep-reinforcement-learning#dependencies
+This instructs how to set up a working python environment and the necessary dependencies. In additon, follow the instructions provided on `Getting Started` in order to install the Reacher Environment
+
 ### Introduction
 
 For this project, you will work with the [Reacher](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Learning-Environment-Examples.md#reacher) environment.
