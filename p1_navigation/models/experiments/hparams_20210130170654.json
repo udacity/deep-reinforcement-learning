@@ -1,0 +1,1 @@
+{"N_episodes":2000,"gamma":0.99,"hidden_layers":[64,32],"drop_p":None,"batch_size":64,"learning_rate":0.0005,"soft_upd_param":0.001,"update_every":4,"buffer_size":100000,"solved":false,"checkpoint":"duelq_checkpoint.pth"}

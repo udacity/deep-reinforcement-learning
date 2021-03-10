@@ -6,6 +6,11 @@
 
 # Project 2: Continuous Control
 
+### DRLD Dependencies
+
+In order to run this environment, please follow the instructions on the README.md on root repository or in the next link: https://github.com/udacity/deep-reinforcement-learning#dependencies
+This instructs how to set up a working python environment `drlnd` and the necessary dependencies. In additon, follow the instructions provided on `Getting Started` in order to install the Reacher Environment
+
 ### Introduction
 
 For this project, you will work with the [Reacher](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Learning-Environment-Examples.md#reacher) environment.
@@ -15,6 +20,7 @@ For this project, you will work with the [Reacher](https://github.com/Unity-Tech
 In this environment, a double-jointed arm can move to target locations. A reward of +0.1 is provided for each step that the agent's hand is in the goal location. Thus, the goal of your agent is to maintain its position at the target location for as many time steps as possible.
 
 The observation space consists of 33 variables corresponding to position, rotation, velocity, and angular velocities of the arm. Each action is a vector with four numbers, corresponding to torque applicable to two joints. Every entry in the action vector should be a number between -1 and 1.
+
 
 ### Distributed Training
 
@@ -64,25 +70,24 @@ The environment is considered solved, when the average (over 100 episodes) of th
 
 ### Instructions
 
-Follow the instructions in `Continuous_Control.ipynb` to get started with training your own agent!  
+Several Continous-Control-xx-xx.ipynb have been added, each one runs a different experiment, for example:
+`Continuous-Control-20a-v02.ipynb`
 
-### (Optional) Challenge: Crawler Environment
+### Implementation
 
-After you have successfully completed the project, you might like to solve the more difficult **Crawler** environment.
 
-![Crawler][image2]
+A module named: `unity_reacher_utils.py` implements the train loop specific for this kind of environment is implemented in `train()` function
 
-In this continuous control environment, the goal is to teach a creature with four legs to walk forward without falling.  
+A folder named `../src/` is created on the root folder model and agent code is placed. 
 
-You can read more about this environment in the ML-Agents GitHub [here](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Learning-Environment-Examples.md#crawler).  To solve this harder task, you'll need to download a new Unity environment.  (**Note**: Udacity students should not submit a project with this new environment.)
+* ac_agent.py: Implements Actor Critic Agents like DDPG, as well as other utilities, like Nosise proccess
+* model.py: Deep Neural networks implementations available for several agents, like `DDPGActor` and `DDPGCritic`
+* 
+* utils.py: Several utilies 
+* dqn_agent.py: `MemoryBuffer` is importend from this module
 
-You need only select the environment that matches your operating system:
-- Linux: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Crawler/Crawler_Linux.zip)
-- Mac OSX: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Crawler/Crawler.app.zip)
-- Windows (32-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Crawler/Crawler_Windows_x86.zip)
-- Windows (64-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Crawler/Crawler_Windows_x86_64.zip)
+In addition, source code is added in `p2_continuous-control/src`
 
-Then, place the file in the `p2_continuous-control/` folder in the DRLND GitHub repository, and unzip (or decompress) the file.  Next, open `Crawler.ipynb` and follow the instructions to learn how to use the Python API to control the agent.
-
-(_For AWS_) If you'd like to train the agent on AWS (and have not [enabled a virtual screen](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Training-on-Amazon-Web-Service.md)), then please use [this link](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Crawler/Crawler_Linux_NoVis.zip) to obtain the "headless" version of the environment.  You will **not** be able to watch the agent without enabling a virtual screen, but you will be able to train the agent.  (_To watch the agent, you should follow the instructions to [enable a virtual screen](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Training-on-Amazon-Web-Service.md), and then download the environment for the **Linux** operating system above._)
-
+### Results:
+`Report.ipynb` aggregates results, add visualizations and then discuss them
+Checkpoints and scores are stored in `models/`, where there is an experiments folder where each experiment hyperparameters adn results are tracked
