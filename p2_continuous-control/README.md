@@ -75,16 +75,18 @@ Several Continous-Control-xx-xx.ipynb have been added, each one runs a different
 
 ### Implementation
 
+
+A module named: `unity_reacher_utils.py` implements the train loop specific for this kind of environment is implemented in `train()` function
+
 A folder named `../src/` is created on the root folder model and agent code is placed. 
 
 * ac_agent.py: Implements Actor Critic Agents like DDPG, as well as other utilities, like Nosise proccess
 * model.py: Deep Neural networks implementations available for several agents, like `DDPGActor` and `DDPGCritic`
-* unity_reacher_utils.py: A train loop specific for this kind of environment is implemented in `train()` function
+* 
 * utils.py: Several utilies 
 * dqn_agent.py: `MemoryBuffer` is importend from this module
 
 In addition, source code is added in `p2_continuous-control/src`
-
 
 ### Results:
 `Report.ipynb` aggregates results, add visualizations and then discuss them
