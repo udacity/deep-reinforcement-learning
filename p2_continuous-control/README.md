@@ -9,7 +9,7 @@
 ### DRLD Dependencies
 
 In order to run this environment, please follow the instructions on the README.md on root repository or in the next link: https://github.com/udacity/deep-reinforcement-learning#dependencies
-This instructs how to set up a working python environment and the necessary dependencies. In additon, follow the instructions provided on `Getting Started` in order to install the Reacher Environment
+This instructs how to set up a working python environment `drlnd` and the necessary dependencies. In additon, follow the instructions provided on `Getting Started` in order to install the Reacher Environment
 
 ### Introduction
 
@@ -75,20 +75,17 @@ Several Continous-Control-xx-xx.ipynb have been added, each one runs a different
 
 ### Implementation
 
-A folder named `../src` is created on the root folder model and agent code is placed. 
+A folder named `../src/` is created on the root folder model and agent code is placed. 
 
-The agent is coded in `ac_agent.py` as well as other agent utilites, like MemoryBuffer and noise
+* ac_agent.py: Implements Actor Critic Agents like DDPG, as well as other utilities, like Nosise proccess
+* model.py: Deep Neural networks implementations available for several agents, like `DDPGActor` and `DDPGCritic`
+* unity_reacher_utils.py: A train loop specific for this kind of environment is implemented in `train()` function
+* utils.py: Several utilies 
+* dqn_agent.py: `MemoryBuffer` is importend from this module
 
-In addition as train loop may be specific to environment behaviour is implemented in `unity_reacher_utils.py` at train() function
-
-The agent will instanciate the network and manage forward pass and backwardation, as well as interacting with the environment (step and act, which also add decaying noise to provide exploration), mananging other systems as Experience Replay Buffer.
-
-The train loop manages updatable params, manages environment's transitions and stores results (scores per episode and model checkpoint)
-
-Each hyperparamenter is documented on its corresponding class, check `ac_agent.py` and `model.py`
-
+In addition, source code is added in `p2_continuous-control/src`
 
 
 ### Results:
-Report.ipynb aggregates results, add visualizations and discuss them
+`Report.ipynb` aggregates results, add visualizations and then discuss them
 Checkpoints and scores are stored in `models/`, where there is an experiments folder where each experiment hyperparameters adn results are tracked
