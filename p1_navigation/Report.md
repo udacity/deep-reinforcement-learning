@@ -2,6 +2,7 @@
 
 ### Plot of Rewards
 This implementation solved the environment (average reward of +13 over the next 100 consecutive episodes) in 430 episodes. Below is a plot of the rewards during training. 
+
 ![Plot of Rewards showing environment solved in 430 episodes](https://github.com/k-staple/deep-reinforcement-learning/blob/write_report/p1_navigation/solved_in_430_episodes.PNG "Plot of Rewards")
 
 ### Learning Algorithm
