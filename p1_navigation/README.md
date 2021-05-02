@@ -20,6 +20,10 @@ The state space has 37 dimensions and contains the agent's velocity, along with 
 
 The task is episodic, and in order to solve the environment, your agent must get an average score of +13 over 100 consecutive episodes.
 
+### My Implementation to Solve the Environment
+
+For details on one solution to Unity's banana navigator environment, see Report.md. I uploaded all the environment and supporting files for this project described below (for Unix) to this repo, so once you can run the cells in Navigator.ipynb, you should be good to go. If you have trouble running Navigator.ipynb, see the Getting Started section.
+
 ### Getting Started
 
 1. Download the environment from one of the links below.  You need only select the environment that matches your operating system:
