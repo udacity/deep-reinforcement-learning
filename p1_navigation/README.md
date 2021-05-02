@@ -22,7 +22,7 @@ The task is episodic, and in order to solve the environment, your agent must get
 
 ### My Implementation to Solve the Environment
 
-For details on one solution to Unity's banana navigator environment, see Report.md. I uploaded all the environment and supporting files for this project described below (for Unix) to this repo, so once you can run the cells in Navigator.ipynb, you should be good to go. If you have trouble running Navigator.ipynb, see the Getting Started section.
+For details on one solution to Unity's banana navigator environment, see Report.md. The model weights from training that solved the environment are saved in checkpoint.pth. Additionally, I uploaded all the environment and supporting files for this project described below (for Unix) to this repo, so once you can run the cells in Navigator.ipynb, you should be good to go. If you have trouble running Navigator.ipynb, see the Getting Started section.
 
 ### Getting Started
 
