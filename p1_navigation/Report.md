@@ -1,7 +1,7 @@
 # My solution for Unity's Banana Navigator environment
 
 ### Plot of Rewards
-This implementation solved the environment (average reward of +13 over the previous 100 consecutive episodes) in 530 episodes. (Note: the executed cells of Navigation.ipynb may say environment was solved in 430 episodes, but that is only if the definition of solving an environment means an average reward of +13 for the *following* 100 episodes.) Below is a plot of the rewards during training. 
+This implementation solved the environment (average reward of +13 over the previous 100 consecutive episodes) in 530 episodes. (Note: the executed cells of Navigation.ipynb may say the environment was solved in 430 episodes, but that is only if the definition of solving an environment means an average reward of +13 for the *following* 100 episodes.) Below is a plot of the rewards during training. 
 
 ![Title saying environment was solved in 530 episodes](https://github.com/k-staple/deep-reinforcement-learning/blob/update_report/p1_navigation/solved_in_530_episodes.PNG "Environment solved in 530 episodes")
 ![Plot of Rewards](https://github.com/k-staple/deep-reinforcement-learning/blob/update_report/p1_navigation/plot_of_rewards_during_training.PNG "Plot of Rewards")
