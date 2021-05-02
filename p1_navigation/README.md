@@ -1,6 +1,7 @@
 [//]: # (Image References)
 
 [image1]: https://user-images.githubusercontent.com/10624937/42135619-d90f2f28-7d12-11e8-8823-82b970a54d7e.gif "Trained Agent"
+[image2]: https://user-images.githubusercontent.com/10624937/42386929-76f671f0-8106-11e8-9376-f17da2ae852e.png "Kernel"
 
 # Project 1: Navigation
 
@@ -22,9 +23,42 @@ The task is episodic, and in order to solve the environment, your agent must get
 
 ### My Implementation to Solve the Environment
 
-For details on one solution to Unity's banana navigator environment, see Report.md. The model weights from training that solved the environment are saved in checkpoint.pth. Additionally, I uploaded all the environment and supporting files for this project described below (for Unix) to this repo, so once you can run the cells in Navigator.ipynb, you should be good to go. If you have trouble running Navigator.ipynb, see the Getting Started section.
+For details on one solution to Unity's banana navigator environment, see Report.md. The model weights from training that solved the environment are saved in checkpoint.pth. Additionally, I uploaded all the environment and supporting files for this project described below (for Unix) to this repo, so once you can run the cells in Navigator.ipynb, you should be good to go; see the "Dependencies" section for more details. For the Unity environment specifically, see the "Getting Started" section.
 
-### Getting Started
+### Dependencies (this section is mostly from Udacity's RL repository's main README)
+
+To set up your python environment to run the code in this repository, follow the instructions below.
+
+1. Create (and activate) a new environment with Python 3.6.
+
+	- __Linux__ or __Mac__: 
+	```bash
+	conda create --name drlnd python=3.6
+	source activate drlnd
+	```
+	- __Windows__: 
+	```bash
+	conda create --name drlnd python=3.6 
+	activate drlnd
+	```
+	
+2. Clone the repository (if you haven't already!), and navigate to the `python/` folder.  Then, install several dependencies. This repository was originally forked from https://github.com/udacity/deep-reinforcement-learning, and I copied Udacity's RL repository's python folder to under p1_navigation as well, so everything necessary for project 1 was in the p1_navigation folder.
+```bash
+git clone https://github.com/k-staple/deep-reinforcement-learning.git 
+cd deep-reinforcement-learning/p1_navigation/python
+pip install .
+```
+
+3. Create an [IPython kernel](http://ipython.readthedocs.io/en/stable/install/kernel_install.html) for the `drlnd` environment.  
+```bash
+python -m ipykernel install --user --name drlnd --display-name "drlnd"
+```
+
+4. Before running code in a notebook, change the kernel to match the `drlnd` environment by using the drop-down `Kernel` menu. 
+
+![Kernel][image2]
+
+### Getting Started with Unity's Banana Navigator environment
 
 1. Download the environment from one of the links below.  You need only select the environment that matches your operating system:
     - Linux: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana_Linux.zip)
