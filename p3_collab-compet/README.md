@@ -41,7 +41,7 @@ The environment is considered solved, when the average (over 100 episodes) of th
 
 Follow the instructions in `Tennis.ipynb` to get started with training your own agent!  
 
-### (Optional) Challenge: Crawler Environment
+### (Optional) Challenge: Soccer Environment
 
 After you have successfully completed the project, you might like to solve the more difficult **Soccer** environment.
 
