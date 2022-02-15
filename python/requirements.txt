@@ -8,7 +8,7 @@ docopt
 pyyaml
 protobuf==3.5.2
 grpcio==1.11.0
-torch==0.4.0
+torch
 pandas
 scipy
 ipykernel
