@@ -1,7 +1,7 @@
 import sys
 import gym
 import numpy as np
-from collections import defaultdict, deque
+from collections import defaultdict
 import matplotlib.pyplot as plt
 
 import check_test
@@ -9,109 +9,69 @@ from plot_utils import plot_values
 
 env = gym.make('CliffWalking-v0')
 
-# print(env.action_space)
-# print(env.observation_space)
-#
-# # define the optimal state-value function
-# V_opt = np.zeros((4, 12))
-# V_opt[0:13][0] = -np.arange(3, 15)[::-1]
-# V_opt[0:13][1] = -np.arange(3, 15)[::-1] + 1
-# V_opt[0:13][2] = -np.arange(3, 15)[::-1] + 2
-# V_opt[3][0] = -13
-#
-# plot_values(V_opt)
-
-
-def sarsa(env, num_episodes, alpha, gamma=1.0, epsilon_start=0.5):
-    # decide epsilon
+def expected_sarsa(env, num_episodes, alpha, gamma=0.95, epsilon_start=1.0):
+    # Initialize epsilon and related parameters
     epsilon = epsilon_start
     epsilon_min = 0.1
-    epsilon_decay = 0.99
+    epsilon_decay = 0.995
 
-    # initialize action-value function (empty dictionary of arrays)
+    nA = 4  # number of actions
+
+    # Initialize the action-value function (empty dictionary of arrays)
     Q = defaultdict(lambda: np.zeros(env.nA))
-    # initialize performance monitor
-    # loop over episodes
+
+    # Loop over episodes
     for i_episode in range(1, num_episodes + 1):
+        if i_episode % 100 == 0:
+            print(f"Episode {i_episode}: Epsilon = {epsilon:.4f}")
 
-        # monitor progress
-        if i_episode % 1 == 0:
-            print("\rEpisode {}/{}.".format(i_episode, num_episodes), end="")
-            sys.stdout.flush()
-
-        # set the value of epsilon
+        # Decay epsilon for exploration-exploitation balance
         epsilon = max(epsilon * epsilon_decay, epsilon_min)
 
-        # generate episode
-        episode = generate_episode(env=env, Q=Q, epsilon=epsilon, nA=4)
+        # Generate episode
+        state, _ = env.reset()
+        action = np.random.choice(np.arange(nA), p=get_probs(Q[state], epsilon, nA))  # epsilon-greedy policy
 
-        Q = update_q(episode, Q, alpha, gamma)
+        while True:
+            next_state, reward, terminated, truncated, _ = env.step(action)
+
+            # Initialize Q-values for the next state if not already initialized
+            if next_state not in Q:
+                Q[next_state] = np.zeros(nA)
+
+            # Compute the expected Q-value for the next state
+            expected_Q = np.dot(get_probs(Q[next_state], epsilon, nA), Q[next_state])
+
+            # SARSA update
+            Q[state][action] += alpha * (reward + gamma * expected_Q - Q[state][action])
+
+            # If the episode ends, break out of the loop
+            if terminated or truncated:
+                break
+
+            # Transition to the next state and choose the next action using epsilon-greedy
+            state = next_state
+            action = np.random.choice(np.arange(nA), p=get_probs(Q[state], epsilon, nA))
+
     return Q
 
-
-def generate_episode(env, Q, epsilon, nA):
-    episode = []
-    state, _ = env.reset()
-
-    action = np.random.choice(np.arange(nA), p=get_probs(Q[state], epsilon, nA)) if state not in Q else np.argmax(
-        Q[state]
-    )
-
-    while True:
-        next_state, reward, terminated, truncated, _ = env.step(action)  # ✅ New API
-        if next_state not in Q:
-            Q[next_state] = np.zeros(nA)  # ✅ Ensure Q-value initialization
-
-        next_action = np.random.choice(np.arange(nA), p=get_probs(Q[next_state], epsilon, nA))
-
-        episode.append((state, action, reward))
-
-        if terminated or truncated:
-            break
-
-        state = next_state  # ✅ Track next state
-        action = next_action  # ✅ Track next action
-
-    return episode
-
 def get_probs(Q_s, epsilon, nA):
-    """ obtains the action probabilities corresponding to epsilon-greedy policy """
+    """ Obtains the action probabilities corresponding to an epsilon-greedy policy """
     policy_states = np.ones(nA) * epsilon / nA
     best_action = np.argmax(Q_s)
     policy_states[best_action] = 1 - epsilon + (epsilon / nA)
     return policy_states
 
-def pick_action(epsilon, Q, next_state):
-    if np.random.rand() < epsilon:
-        next_action = env.action_space.sample()  # Explore (random action)
-    else:
-        next_action = np.argmax(Q[next_state])  # Exploit (best action)
 
-    return next_action
+# Obtain the estimated optimal policy and corresponding action-value function using Expected SARSA
+Q_expected_sarsa = expected_sarsa(env, 50000, .01)
 
-def update_q(episode, Q, alpha, gamma):
-    """ updates the action-value function estimate using the most recent episode """
-    states, actions, rewards = zip(*episode)
-    # prepare for discounting
-    for i in range(len(states) - 1):  # Ignore last step
-        state, action = states[i], actions[i]
-        next_state, next_action = states[i + 1], actions[i + 1]  # ✅ Use episode step
-
-        old_Q = Q[state][action]
-        next_Q = Q[next_state][next_action]  # ✅ Correct SARSA update
-        Q[state][action] = old_Q + alpha * (rewards[i] + gamma * next_Q - old_Q)
-    return Q
-
-
-# obtain the estimated optimal policy and corresponding action-value function
-Q_sarsa = sarsa(env, 5000, .01)
-
-# print the estimated optimal policy
-policy_sarsa = np.array([np.argmax(Q_sarsa[key]) if key in Q_sarsa else -1 for key in np.arange(48)]).reshape(4,12)
-check_test.run_check('td_control_check', policy_sarsa)
+# Print the estimated optimal policy
+policy_expected_sarsa = np.array([np.argmax(Q_expected_sarsa[key]) if key in Q_expected_sarsa else -1 for key in np.arange(48)]).reshape(4, 12)
+check_test.run_check('td_control_check', policy_expected_sarsa)
 print("\nEstimated Optimal Policy (UP = 0, RIGHT = 1, DOWN = 2, LEFT = 3, N/A = -1):")
-print(policy_sarsa)
+print(policy_expected_sarsa)
 
-# plot the estimated optimal state-value function
-V_sarsa = ([np.max(Q_sarsa[key]) if key in Q_sarsa else 0 for key in np.arange(48)])
-plot_values(V_sarsa)
+# Plot the estimated optimal state-value function
+V_expected_sarsa = [np.max(Q_expected_sarsa[key]) if key in Q_expected_sarsa else 0 for key in np.arange(48)]
+plot_values(V_expected_sarsa)

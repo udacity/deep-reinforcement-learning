@@ -9,24 +9,11 @@ from plot_utils import plot_values
 
 env = gym.make('CliffWalking-v0')
 
-# print(env.action_space)
-# print(env.observation_space)
-#
-# # define the optimal state-value function
-# V_opt = np.zeros((4, 12))
-# V_opt[0:13][0] = -np.arange(3, 15)[::-1]
-# V_opt[0:13][1] = -np.arange(3, 15)[::-1] + 1
-# V_opt[0:13][2] = -np.arange(3, 15)[::-1] + 2
-# V_opt[3][0] = -13
-#
-# plot_values(V_opt)
-
-
-def sarsa(env, num_episodes, alpha, gamma=1.0, epsilon_start=1.0):
+def sarsa(env, num_episodes, alpha, gamma=1.0, epsilon_start=0.5):
     # decide epsilon
     epsilon = epsilon_start
     epsilon_min = 0.1
-    epsilon_decay = 0.9999
+    epsilon_decay = 0.99
 
     # initialize action-value function (empty dictionary of arrays)
     Q = defaultdict(lambda: np.zeros(env.nA))
@@ -35,10 +22,9 @@ def sarsa(env, num_episodes, alpha, gamma=1.0, epsilon_start=1.0):
     for i_episode in range(1, num_episodes + 1):
 
         # monitor progress
-        if i_episode % 499999 == 0:
-            print("\rEpisode {}/{}".format(i_episode, num_episodes), end="")
-            print (str(Q))
-
+        if i_episode % 1 == 0:
+            print("\rEpisode {}/{}.".format(i_episode, num_episodes), end="")
+            sys.stdout.flush()
 
         # set the value of epsilon
         epsilon = max(epsilon * epsilon_decay, epsilon_min)
@@ -53,20 +39,12 @@ def sarsa(env, num_episodes, alpha, gamma=1.0, epsilon_start=1.0):
 def generate_episode(env, Q, epsilon, nA):
     episode = []
     state, _ = env.reset()
-    if isinstance(state, dict):
-        state = tuple(sorted(state.items()))
 
-    action = np.random.choice(np.arange(nA),
-                              p=get_probs(Q[state], epsilon, nA)) if state in Q else env.action_space.sample()
+    action = np.random.choice(np.arange(nA), p=get_probs(Q[state], epsilon, nA)) if state not in Q else np.argmax(
+        Q[state]
+    )
 
     while True:
-        if isinstance(state, tuple):
-            state = state[0]  # Extract actual state if (state, info) is returned
-
-        # ✅ Convert state to tuple if it’s a dictionary
-        if isinstance(state, dict):
-            state = tuple(sorted(state.items()))
-
         next_state, reward, terminated, truncated, _ = env.step(action)  # ✅ New API
         if next_state not in Q:
             Q[next_state] = np.zeros(nA)  # ✅ Ensure Q-value initialization
@@ -113,7 +91,7 @@ def update_q(episode, Q, alpha, gamma):
 
 
 # obtain the estimated optimal policy and corresponding action-value function
-Q_sarsa = sarsa(env, 500000, .01)
+Q_sarsa = sarsa(env, 5000, .01)
 
 # print the estimated optimal policy
 policy_sarsa = np.array([np.argmax(Q_sarsa[key]) if key in Q_sarsa else -1 for key in np.arange(48)]).reshape(4,12)
